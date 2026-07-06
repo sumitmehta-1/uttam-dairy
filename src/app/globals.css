@@ -521,6 +521,7 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
 }
 
 .hero-bg {
@@ -529,6 +530,7 @@ body::before {
   width: 100%; height: 100%;
   object-fit: cover;
   filter: brightness(0.55) saturate(1.1);
+  z-index: 0;
 }
 
 .hero-overlay {
@@ -539,6 +541,7 @@ body::before {
     rgba(27,94,59,0.4) 0%,
     rgba(27,94,59,0.7) 100%
   );
+  z-index: 1;
 }
 
 .hero-content {

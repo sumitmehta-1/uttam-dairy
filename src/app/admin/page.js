@@ -30,7 +30,7 @@ export default function AdminDashboard() {
       {/* Title block */}
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', color: 'var(--charcoal)', fontSize: '2rem', fontWeight: '800' }}>Admin Dashboard</h1>
-        <p style={{ color: 'var(--gray-medium)', fontSize: '0.88rem' }}>Welcome back, administrator. Here is a summary of Uttam Dairy store activity today.</p>
+        <p style={{ color: 'var(--gray-medium)', fontSize: '0.88rem' }}>Welcome back, Ankush. Here is a summary of Uttam Dairy store activity today.</p>
       </div>
 
       {/* Stats Cards */}

@@ -13,7 +13,7 @@ export default function HeroSection() {
   return (
     <section className="hero">
       <img
-        src="/assets/hero-bg.jpg"
+        src="/hero-bg.jpg"
         alt="Lush pasture with cows grazing"
         className="hero-bg"
         onError={(e) => {

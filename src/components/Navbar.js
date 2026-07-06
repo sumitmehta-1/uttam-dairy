@@ -7,10 +7,12 @@ import Link from 'next/link';
 
 export default function Navbar({ onOpenLogin, onOpenCart, onOpenLocation, onSearch }) {
   const { getCartCount } = useCart();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isDelivery } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+
+  const isStaffRole = user && (user.role === 'admin' || user.role === 'delivery');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,30 +54,35 @@ export default function Navbar({ onOpenLogin, onOpenCart, onOpenLocation, onSear
           </div>
         </Link>
 
-        {/* Location display Zomato-style */}
-        <div className="nav-location" onClick={onOpenLocation}>
-          <span className="nav-location-icon">📍</span>
-          <div className="nav-location-text">
-            <span className="nav-location-label">Delivering to</span>
-            <span className="nav-location-value">
-              {user && user.loggedIn ? user.address : 'Select Location'}
-            </span>
+        {/* Location display — hide for staff */}
+        {!isStaffRole && (
+          <div className="nav-location" onClick={onOpenLocation}>
+            <span className="nav-location-icon">📍</span>
+            <div className="nav-location-text">
+              <span className="nav-location-label">Delivering to</span>
+              <span className="nav-location-value">
+                {user && user.loggedIn ? user.address : 'Select Location'}
+              </span>
+            </div>
+            <span className="nav-location-arrow">▼</span>
           </div>
-          <span className="nav-location-arrow">▼</span>
-        </div>
+        )}
       </div>
 
-      <div className="nav-center">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="Search for milk, ghee, paneer, ice cream..."
-            value={searchVal}
-            onChange={handleSearchChange}
-          />
+      {/* Search bar — hide for admin/delivery */}
+      {!isStaffRole && (
+        <div className="nav-center">
+          <div className="search-box">
+            <span className="search-icon">🔍</span>
+            <input
+              type="text"
+              placeholder="Search for milk, ghee, paneer, ice cream..."
+              value={searchVal}
+              onChange={handleSearchChange}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="nav-right">
         {user && user.loggedIn ? (
@@ -94,8 +101,17 @@ export default function Navbar({ onOpenLogin, onOpenCart, onOpenLocation, onSear
                   📊 Admin Panel
                 </a>
               )}
-              <a href="/orders" className="profile-dropdown-item">📦 My Orders</a>
-              <a href="/profile" className="profile-dropdown-item">👤 Profile Settings</a>
+              {isDelivery() && (
+                <a href="/delivery" className="profile-dropdown-item" style={{ fontWeight: '600', color: 'var(--green-primary)' }}>
+                  🛵 Delivery Panel
+                </a>
+              )}
+              {!isStaffRole && (
+                <>
+                  <a href="/orders" className="profile-dropdown-item">📦 My Orders</a>
+                  <a href="/profile" className="profile-dropdown-item">👤 Profile Settings</a>
+                </>
+              )}
               <div className="profile-dropdown-item danger" onClick={handleLogout}>
                 🚪 Logout
               </div>
@@ -108,11 +124,14 @@ export default function Navbar({ onOpenLogin, onOpenCart, onOpenLocation, onSear
           </button>
         )}
 
-        <button className="nav-btn nav-btn-cart" onClick={onOpenCart}>
-          <span className="btn-icon">🛒</span>
-          <span className="btn-text">Cart</span>
-          {getCartCount() > 0 && <span className="cart-badge">{getCartCount()}</span>}
-        </button>
+        {/* Cart button — hide for admin/delivery */}
+        {!isStaffRole && (
+          <button className="nav-btn nav-btn-cart" onClick={onOpenCart}>
+            <span className="btn-icon">🛒</span>
+            <span className="btn-text">Cart</span>
+            {getCartCount() > 0 && <span className="cart-badge">{getCartCount()}</span>}
+          </button>
+        )}
       </div>
     </nav>
   );

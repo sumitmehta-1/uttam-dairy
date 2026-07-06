@@ -22,12 +22,11 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (phone, password) => {
-    // Simulated Login
-    // Default admin test credentials
-    if (phone === '9999999999' && password === 'admin123') {
+    // Admin credentials — Ankush (Owner)
+    if (phone === '9050644622' && password === 'dairy823@*') {
       const adminUser = {
-        name: 'Uttam Kumar (Admin)',
-        phone: '9999999999',
+        name: 'Ankush',
+        phone: '9050644622',
         address: 'Uttam Dairy Shop, Main Market Road',
         latitude: 28.6139,
         longitude: 77.2090,
@@ -39,7 +38,23 @@ export function AuthProvider({ children }) {
       return { success: true, user: adminUser };
     }
 
-    // Default standard user test credentials or new users
+    // Delivery Boy credentials
+    if (phone === '9050644621' && password === 'dairy823@*') {
+      const deliveryUser = {
+        name: 'Delivery Partner',
+        phone: '9050644621',
+        address: 'Uttam Dairy Delivery Hub',
+        latitude: 28.6139,
+        longitude: 77.2090,
+        role: 'delivery',
+        loggedIn: true
+      };
+      setUser(deliveryUser);
+      localStorage.setItem('uttam_dairy_user', JSON.stringify(deliveryUser));
+      return { success: true, user: deliveryUser };
+    }
+
+    // Default standard user — any other phone/password combo
     const mockUser = {
       name: 'Test Customer',
       phone: phone,
@@ -85,6 +100,10 @@ export function AuthProvider({ children }) {
     return user && user.role === 'admin';
   };
 
+  const isDelivery = () => {
+    return user && user.role === 'delivery';
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -94,7 +113,8 @@ export function AuthProvider({ children }) {
         signup,
         logout,
         updateLocation,
-        isAdmin
+        isAdmin,
+        isDelivery
       }}
     >
       {children}

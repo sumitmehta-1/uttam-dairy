@@ -12,6 +12,8 @@ import LoginModal from '@/components/LoginModal';
 import { PRODUCTS } from '@/lib/products';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/components/Toast';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function Home() {
@@ -27,10 +29,26 @@ export default function Home() {
   
   const { getCartCount, getCartTotal } = useCart();
   const { showToast } = useToast();
+  const { user, isAdmin, isDelivery } = useAuth();
+  const router = useRouter();
 
   // Subscription form states
   const [subQty, setSubQty] = useState(1);
   const [subPlan, setSubPlan] = useState('daily'); // 'daily' | 'alternate' | 'weekends'
+
+  // Redirect admin/delivery to their panels
+  useEffect(() => {
+    if (user && user.loggedIn) {
+      if (isAdmin()) {
+        router.push('/admin');
+        return;
+      }
+      if (isDelivery()) {
+        router.push('/delivery');
+        return;
+      }
+    }
+  }, [user]);
 
   // Sync active order status
   useEffect(() => {
