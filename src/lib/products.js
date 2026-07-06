@@ -1,0 +1,122 @@
+export const PRODUCTS = [
+  {
+    id: 'prod-milk-500',
+    name: 'Uttam Premium Cow Milk',
+    category: 'Milk & Cream',
+    price: 33,
+    mrp: 35,
+    weight: '500 ml',
+    image: '/milk.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: 'Farm-fresh pasteurized cow milk. Rich in taste, nutrients, and cream. Ideal for daily tea, coffee, and kids growth.'
+  },
+  {
+    id: 'prod-milk-1000',
+    name: 'Uttam Pure Family Milk',
+    category: 'Milk & Cream',
+    price: 64,
+    mrp: 66,
+    weight: '1 Litre',
+    image: '/milk.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: '1 Litre pack of pasteurized cow milk, delivered fresh within hours of milking. High hygiene guaranteed.'
+  },
+  {
+    id: 'prod-ghee-1000',
+    name: 'Granular Desi Cow Ghee',
+    category: 'Butter & Ghee',
+    price: 680,
+    mrp: 720,
+    weight: '1 Litre Jar',
+    image: '/ghee.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: 'Traditionally churned golden cow ghee. Rich aroma, granular (danedar) texture, and loaded with healthy fats.'
+  },
+  {
+    id: 'prod-butter-200',
+    name: 'Pure White Table Butter',
+    category: 'Butter & Ghee',
+    price: 110,
+    mrp: 115,
+    weight: '200 g',
+    image: '/butter.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: 'Creamy, lightly salted fresh table butter churned from pure cow milk. Perfect spread for warm parathas and toast.'
+  },
+  {
+    id: 'prod-paneer-200',
+    name: 'Fresh Soft Paneer',
+    category: 'Paneer & Cheese',
+    price: 115,
+    mrp: 125,
+    weight: '200 g',
+    image: '/paneer.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: 'Super soft, vacuum-packed cottage cheese. Melt-in-mouth texture, prepared fresh every morning.'
+  },
+  {
+    id: 'prod-paneer-500',
+    name: 'Fresh Soft Paneer (Family Pack)',
+    category: 'Paneer & Cheese',
+    price: 260,
+    mrp: 290,
+    weight: '500 g',
+    image: '/paneer.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: 'Super soft cottage cheese cubes family size. Prepared fresh, zero preservatives, high protein content.'
+  },
+  {
+    id: 'prod-curd-400',
+    name: 'Thick Creamy Set Curd',
+    category: 'Curd & Yogurt',
+    price: 40,
+    mrp: 45,
+    weight: '400 g Cup',
+    image: '/curd.jpg',
+    deliveryTime: '10 mins',
+    inStock: true,
+    description: 'Thick, creamy set yogurt with a mild, pleasant sourness. High in calcium and good gut bacteria.'
+  },
+  {
+    id: 'prod-curd-clay',
+    name: 'Traditional Claypot Dahi',
+    category: 'Curd & Yogurt',
+    price: 90,
+    mrp: 100,
+    weight: '800 g Pot',
+    image: '/curd.jpg',
+    deliveryTime: '15 mins',
+    inStock: true,
+    description: 'Curd set in traditional earthenware clay pots. Earthen pots absorb excess water, making it extremely thick, sweet and natural.'
+  },
+  {
+    id: 'prod-kulfi-kesar',
+    name: 'Saffron Pistachio Kesar Kulfi',
+    category: 'Ice Cream',
+    price: 45,
+    mrp: 50,
+    weight: '1 Stick',
+    image: 'https://images.unsplash.com/photo-1579954115545-a95591f28bfc?auto=format&fit=crop&w=300&q=80',
+    deliveryTime: '12 mins',
+    inStock: true,
+    description: 'Traditional slow-cooked milk ice-cream flavored with pure Kashmiri saffron, cardamom, and loaded with pistachios.'
+  },
+  {
+    id: 'prod-sweets-peda',
+    name: 'Premium Milk Sweets (Peda)',
+    category: 'Dairy Sweets',
+    price: 180,
+    mrp: 200,
+    weight: '250 g Box',
+    image: 'https://images.unsplash.com/photo-1601356616077-695728ecf769?auto=format&fit=crop&w=300&q=80',
+    deliveryTime: '15 mins',
+    inStock: true,
+    description: 'Rich, fudgy peda sweets made from milk solids (khoya), sugar, and green cardamom. The taste of celebration.'
+  }
+];
