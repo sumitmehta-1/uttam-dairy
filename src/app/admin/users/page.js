@@ -1,17 +1,29 @@
 'use client';
 
-import React from 'react';
-
-// Seeding Mock Customers
-const CUSTOMERS = [
-  { id: 'USR-001', name: 'Uttam Kumar (Admin)', phone: '9999999999', address: 'Uttam Dairy Shop, Main Market Road', role: 'admin', ordersCount: 0, subscription: 'None', dateJoined: '01 July 2026' },
-  { id: 'USR-002', name: 'Aarav Sharma', phone: '9876543210', address: 'Dwarka Sector 12, Flat 104, Block-B, New Delhi', role: 'user', ordersCount: 14, subscription: 'Daily Milk (1L)', dateJoined: '02 July 2026' },
-  { id: 'USR-003', name: 'Pooja Patel', phone: '9988776655', address: 'Dwarka Sector 10, Pocket 2, House 14, New Delhi', role: 'user', ordersCount: 9, subscription: 'None', dateJoined: '03 July 2026' },
-  { id: 'USR-004', name: 'Vikram Singh', phone: '9123456789', address: 'Dwarka Sector 4, DDA Flats, Pocket-Q, New Delhi', role: 'user', ordersCount: 22, subscription: 'Alternate Milk (500ml)', dateJoined: '03 July 2026' },
-  { id: 'USR-005', name: 'Neha Gupta', phone: '9345678901', address: 'Dwarka Sector 22, Rose Apartments, Block-D, New Delhi', role: 'user', ordersCount: 6, subscription: 'None', dateJoined: '05 July 2026' }
-];
+import React, { useState, useEffect } from 'react';
 
 export default function AdminUsers() {
+  const [users, setUsers] = useState([]);
+
+  // Load registered users from localStorage
+  useEffect(() => {
+    const loadUsers = () => {
+      try {
+        const savedUsers = localStorage.getItem('uttam_registered_users');
+        if (savedUsers) {
+          setUsers(JSON.parse(savedUsers));
+        }
+      } catch (e) {
+        console.error('Error loading registered users:', e);
+      }
+    };
+
+    loadUsers();
+    // Poll every 3 seconds to keep sync
+    const interval = setInterval(loadUsers, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div style={{ fontFamily: 'var(--font-body)' }}>
       {/* Header section */}
@@ -43,33 +55,41 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {CUSTOMERS.map((c) => (
-                <tr key={c.id} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
-                  <td style={{ padding: '16px', fontWeight: '700', color: 'var(--green-primary)' }}>{c.id}</td>
-                  <td style={{ padding: '16px', fontWeight: '700', color: 'var(--charcoal)' }}>{c.name}</td>
-                  <td style={{ padding: '16px', fontWeight: '600' }}>📞 {c.phone}</td>
-                  <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.address}>
-                    {c.address}
+              {users.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-medium)', fontWeight: '600' }}>
+                    No users registered yet.
                   </td>
-                  <td style={{ padding: '16px' }}>
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: '0.7rem',
-                      fontWeight: '700',
-                      background: c.role === 'admin' ? 'var(--gold-light)' : 'var(--gray-pale)',
-                      color: c.role === 'admin' ? 'var(--gold-dark)' : 'var(--charcoal-light)'
-                    }}>
-                      {c.role.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '16px', fontWeight: '800', textAlign: 'center' }}>{c.ordersCount}</td>
-                  <td style={{ padding: '16px', fontWeight: '600', color: c.subscription !== 'None' ? 'var(--green-primary)' : 'var(--gray-medium)' }}>
-                    {c.subscription}
-                  </td>
-                  <td style={{ padding: '16px', color: 'var(--gray-medium)' }}>{c.dateJoined}</td>
                 </tr>
-              ))}
+              ) : (
+                users.map((c) => (
+                  <tr key={c.id || c.phone} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
+                    <td style={{ padding: '16px', fontWeight: '700', color: 'var(--green-primary)' }}>{c.id || 'N/A'}</td>
+                    <td style={{ padding: '16px', fontWeight: '700', color: 'var(--charcoal)' }}>{c.name}</td>
+                    <td style={{ padding: '16px', fontWeight: '600' }}>📞 {c.phone}</td>
+                    <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.address}>
+                      {c.address}
+                    </td>
+                    <td style={{ padding: '16px' }}>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: '0.7rem',
+                        fontWeight: '700',
+                        background: c.role === 'admin' ? 'var(--gold-light)' : c.role === 'delivery' ? 'var(--green-pale)' : 'var(--gray-pale)',
+                        color: c.role === 'admin' ? 'var(--gold-dark)' : c.role === 'delivery' ? 'var(--green-deep)' : 'var(--charcoal-light)'
+                      }}>
+                        {c.role ? c.role.toUpperCase() : 'USER'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '16px', fontWeight: '800', textAlign: 'center' }}>{c.ordersCount || 0}</td>
+                    <td style={{ padding: '16px', fontWeight: '600', color: c.subscription && c.subscription !== 'None' ? 'var(--green-primary)' : 'var(--gray-medium)' }}>
+                      {c.subscription || 'None'}
+                    </td>
+                    <td style={{ padding: '16px', color: 'var(--gray-medium)' }}>{c.dateJoined || 'N/A'}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

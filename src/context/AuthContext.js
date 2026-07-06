@@ -15,6 +15,20 @@ export function AuthProvider({ children }) {
       if (savedUser) {
         setUser(JSON.parse(savedUser));
       }
+
+      // Initialize registered users list if empty
+      const existingUsers = localStorage.getItem('uttam_registered_users');
+      if (!existingUsers) {
+        const seedUsers = [
+          { id: 'USR-001', name: 'Ankush (Admin)', phone: '9050644622', address: 'Uttam Dairy Shop, Main Market Road', role: 'admin', ordersCount: 0, subscription: 'None', dateJoined: '01 July 2026' },
+          { id: 'USR-002', name: 'Aarav Sharma', phone: '9876543210', address: 'Dwarka Sector 12, Flat 104, Block-B, New Delhi', role: 'user', ordersCount: 14, subscription: 'Daily Milk (1L)', dateJoined: '02 July 2026' },
+          { id: 'USR-003', name: 'Pooja Patel', phone: '9988776655', address: 'Dwarka Sector 10, Pocket 2, House 14, New Delhi', role: 'user', ordersCount: 9, subscription: 'None', dateJoined: '03 July 2026' },
+          { id: 'USR-004', name: 'Vikram Singh', phone: '9123456789', address: 'Dwarka Sector 4, DDA Flats, Pocket-Q, New Delhi', role: 'user', ordersCount: 22, subscription: 'Alternate Milk (500ml)', dateJoined: '03 July 2026' },
+          { id: 'USR-005', name: 'Neha Gupta', phone: '9345678901', address: 'Dwarka Sector 22, Rose Apartments, Block-D, New Delhi', role: 'user', ordersCount: 6, subscription: 'None', dateJoined: '05 July 2026' },
+          { id: 'USR-006', name: 'Delivery Partner', phone: '9050644621', address: 'Uttam Dairy Delivery Hub', role: 'delivery', ordersCount: 0, subscription: 'None', dateJoined: '06 July 2026' }
+        ];
+        localStorage.setItem('uttam_registered_users', JSON.stringify(seedUsers));
+      }
     } catch (e) {
       console.error('Error loading user:', e);
     }
@@ -79,6 +93,27 @@ export function AuthProvider({ children }) {
       role: 'user',
       loggedIn: true
     };
+
+    // Add to all registered users list in localStorage
+    try {
+      const existingUsers = JSON.parse(localStorage.getItem('uttam_registered_users') || '[]');
+      if (!existingUsers.some(u => u.phone === phone)) {
+        existingUsers.push({
+          id: `USR-${Math.floor(100 + Math.random() * 900)}`,
+          name,
+          phone,
+          address: address || 'No address set',
+          role: 'user',
+          ordersCount: 0,
+          subscription: 'None',
+          dateJoined: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+        });
+        localStorage.setItem('uttam_registered_users', JSON.stringify(existingUsers));
+      }
+    } catch(e) {
+      console.error('Error writing to registered users list:', e);
+    }
+
     setUser(newUser);
     localStorage.setItem('uttam_dairy_user', JSON.stringify(newUser));
     return { success: true, user: newUser };
