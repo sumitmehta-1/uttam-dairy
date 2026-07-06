@@ -68,19 +68,52 @@ export function AuthProvider({ children }) {
       return { success: true, user: deliveryUser };
     }
 
-    // Default standard user — any other phone/password combo
-    const mockUser = {
-      name: 'Test Customer',
+    // Default standard user — load their registered name and address from database
+    let registeredUser = null;
+    let existingUsers = [];
+    try {
+      existingUsers = JSON.parse(localStorage.getItem('uttam_registered_users') || '[]');
+      registeredUser = existingUsers.find(u => u.phone === phone);
+    } catch(e) {
+      console.error('Error loading users database for login:', e);
+    }
+
+    const nameToUse = registeredUser ? registeredUser.name : 'Test Customer';
+    const addressToUse = registeredUser ? registeredUser.address : 'Pocket 4, Sector 2, Dwarka, New Delhi';
+    const roleToUse = registeredUser ? registeredUser.role : 'user';
+
+    const loggedUser = {
+      name: nameToUse,
       phone: phone,
-      address: 'Pocket 4, Sector 2, Dwarka, New Delhi',
-      latitude: 28.5921,
-      longitude: 77.0628,
-      role: 'user',
+      address: addressToUse,
+      latitude: registeredUser ? registeredUser.latitude : 28.5921,
+      longitude: registeredUser ? registeredUser.longitude : 77.0628,
+      role: roleToUse,
       loggedIn: true
     };
-    setUser(mockUser);
-    localStorage.setItem('uttam_dairy_user', JSON.stringify(mockUser));
-    return { success: true, user: mockUser };
+
+    // If it's a completely new login and not in the users database, add it
+    if (!registeredUser) {
+      try {
+        existingUsers.push({
+          id: `USR-${Math.floor(100 + Math.random() * 900)}`,
+          name: nameToUse,
+          phone: phone,
+          address: addressToUse,
+          role: roleToUse,
+          ordersCount: 0,
+          subscription: 'None',
+          dateJoined: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+        });
+        localStorage.setItem('uttam_registered_users', JSON.stringify(existingUsers));
+      } catch(e) {
+        console.error('Error writing new fallback user:', e);
+      }
+    }
+
+    setUser(loggedUser);
+    localStorage.setItem('uttam_dairy_user', JSON.stringify(loggedUser));
+    return { success: true, user: loggedUser };
   };
 
   const signup = async (name, phone, password, address, latitude, longitude) => {
