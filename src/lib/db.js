@@ -1,10 +1,35 @@
 import { supabase } from './supabase';
+import { PRODUCTS } from './products';
 
 // Helper to check if Supabase is properly configured
 const isSupabaseConfigured = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   return url && key && url !== '' && key !== 'your-public-anon-key-here' && key !== 'sb_publishable_zCKw3Jniil8-DhOGuJI7ag_TrOQkKHv_placeholder';
+};
+
+// Default seed profiles (admin + delivery + demo users)
+const SEED_PROFILES = [
+  { id: 'USR-001', name: 'Ankush', phone: '9050644622', password: 'dairy823@*', address: 'Uttam Dairy Shop, Main Market Road', role: 'admin', ordersCount: 0, subscription: 'None', dateJoined: '01 July 2026' },
+  { id: 'USR-002', name: 'Delivery Partner', phone: '9050644621', password: 'dairy823@*', address: 'Uttam Dairy Delivery Hub', role: 'delivery', ordersCount: 0, subscription: 'None', dateJoined: '01 July 2026' },
+  { id: 'USR-003', name: 'Aarav Sharma', phone: '9876543210', password: 'password123', address: 'Dwarka Sector 12, Flat 104, Block-B, New Delhi', role: 'user', ordersCount: 14, subscription: 'Daily Milk (1L)', dateJoined: '02 July 2026' },
+  { id: 'USR-004', name: 'Pooja Patel', phone: '9988776655', password: 'password123', address: 'Dwarka Sector 10, Pocket 2, House 14, New Delhi', role: 'user', ordersCount: 9, subscription: 'None', dateJoined: '03 July 2026' },
+  { id: 'USR-005', name: 'Vikram Singh', phone: '9123456789', password: 'password123', address: 'Dwarka Sector 4, DDA Flats, Pocket-Q, New Delhi', role: 'user', ordersCount: 22, subscription: 'Alternate Milk (500ml)', dateJoined: '03 July 2026' }
+];
+
+// Ensure seed profiles exist in localStorage
+const ensureSeedProfiles = () => {
+  try {
+    const existing = localStorage.getItem('uttam_registered_users');
+    if (!existing || JSON.parse(existing).length === 0) {
+      localStorage.setItem('uttam_registered_users', JSON.stringify(SEED_PROFILES));
+      return SEED_PROFILES;
+    }
+    return JSON.parse(existing);
+  } catch (e) {
+    localStorage.setItem('uttam_registered_users', JSON.stringify(SEED_PROFILES));
+    return SEED_PROFILES;
+  }
 };
 
 // ============================================
@@ -26,8 +51,8 @@ export const dbGetProfile = async (phone) => {
     }
   }
 
-  // Fallback to localStorage
-  const localUsers = JSON.parse(localStorage.getItem('uttam_registered_users') || '[]');
+  // Fallback to localStorage (with auto-seeding)
+  const localUsers = ensureSeedProfiles();
   return localUsers.find(u => u.phone === phone) || null;
 };
 
@@ -49,7 +74,7 @@ export const dbCreateProfile = async (profileData) => {
   }
 
   // Fallback to localStorage
-  const localUsers = JSON.parse(localStorage.getItem('uttam_registered_users') || '[]');
+  const localUsers = ensureSeedProfiles();
   if (!localUsers.some(u => u.phone === phone)) {
     const newProfile = {
       id: `USR-${Math.floor(100 + Math.random() * 900)}`,
@@ -83,7 +108,7 @@ export const dbGetAllProfiles = async () => {
     }
   }
 
-  return JSON.parse(localStorage.getItem('uttam_registered_users') || '[]');
+  return ensureSeedProfiles();
 };
 
 
@@ -112,7 +137,6 @@ export const dbGetProducts = async () => {
   }
   
   // Seed local storage with default products if empty
-  const { PRODUCTS } = require('./products');
   localStorage.setItem('uttam_products_catalog', JSON.stringify(PRODUCTS));
   return PRODUCTS;
 };
