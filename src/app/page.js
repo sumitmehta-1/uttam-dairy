@@ -9,16 +9,17 @@ import ProductCard from '@/components/ProductCard';
 import CartDrawer from '@/components/CartDrawer';
 import LocationPicker from '@/components/LocationPicker';
 import LoginModal from '@/components/LoginModal';
-import { PRODUCTS } from '@/lib/products';
 import { useCart } from '@/context/CartContext';
 import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { dbGetProducts } from '@/lib/db';
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [products, setProducts] = useState([]);
   
   // Modals state
   const [loginOpen, setLoginOpen] = useState(false);
@@ -35,6 +36,19 @@ export default function Home() {
   // Subscription form states
   const [subQty, setSubQty] = useState(1);
   const [subPlan, setSubPlan] = useState('daily'); // 'daily' | 'alternate' | 'weekends'
+
+  // Load products list from database
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        const data = await dbGetProducts();
+        setProducts(data);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchCatalog();
+  }, []);
 
   // Redirect admin/delivery to their panels
   useEffect(() => {
@@ -80,7 +94,7 @@ export default function Home() {
   };
 
   // Filter products
-  const filteredProducts = PRODUCTS.filter((product) => {
+  const filteredProducts = products.filter((product) => {
     const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery) ||
                           product.category.toLowerCase().includes(searchQuery) ||

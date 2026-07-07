@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import { PRODUCTS } from '@/lib/products';
 import Link from 'next/link';
+import { dbUpdateOrderStatus, dbUpdateOrderItems } from '@/lib/db';
 
 export default function ActiveOrderPage() {
   const { user, loading } = useAuth();
@@ -83,14 +84,8 @@ export default function ActiveOrderPage() {
       const updated = { ...prev, status: newStatus };
       localStorage.setItem('uttam_active_order', JSON.stringify(updated));
       
-      // Also update in orders history list
-      try {
-        const history = JSON.parse(localStorage.getItem('uttam_orders_history') || '[]');
-        const updatedHistory = history.map(o => o.id === prev.id ? { ...o, status: newStatus } : o);
-        localStorage.setItem('uttam_orders_history', JSON.stringify(updatedHistory));
-      } catch (e) {
-        console.error(e);
-      }
+      // Update in Supabase/localStorage database
+      dbUpdateOrderStatus(prev.id, newStatus);
       return updated;
     });
   };
@@ -140,14 +135,8 @@ export default function ActiveOrderPage() {
 
       localStorage.setItem('uttam_active_order', JSON.stringify(updatedOrder));
 
-      // Update in orders history list
-      try {
-        const history = JSON.parse(localStorage.getItem('uttam_orders_history') || '[]');
-        const updatedHistory = history.map(o => o.id === prev.id ? updatedOrder : o);
-        localStorage.setItem('uttam_orders_history', JSON.stringify(updatedHistory));
-      } catch (e) {
-        console.error(e);
-      }
+      // Update order details in Supabase/localStorage database
+      dbUpdateOrderItems(prev.id, updatedItems, newSubtotal, newDeliveryFee, newHandlingFee, newTotal);
 
       // Reset local countdown timer to 3 minutes
       setTimeLeft(180);

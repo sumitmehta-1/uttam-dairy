@@ -1,34 +1,63 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
-
-// Seeding Mock Store Orders
-const MOCK_ORDERS = [
-  { id: 'ORD-9382', name: 'Aarav Sharma', phone: '9876543210', items: 'Cow Milk (1L) x 2, Paneer (200g) x 1', total: 243, address: 'Dwarka Sector 12, Flat 104, Block-B, New Delhi', status: 'Out for Delivery', date: '06 July 2026, 04:15 PM' },
-  { id: 'ORD-9381', name: 'Pooja Patel', phone: '9988776655', items: 'Desi Cow Ghee (1L) x 1, Claypot Dahi x 1', total: 770, address: 'Dwarka Sector 10, Pocket 2, House 14, New Delhi', status: 'Pending', date: '06 July 2026, 04:02 PM' },
-  { id: 'ORD-9380', name: 'Vikram Singh', phone: '9123456789', items: 'Table Butter (200g) x 1, Soft Paneer (500g) x 1', total: 370, address: 'Dwarka Sector 4, DDA Flats, Pocket-Q, New Delhi', status: 'Delivered', date: '06 July 2026, 03:00 PM' },
-  { id: 'ORD-9379', name: 'Neha Gupta', phone: '9345678901', items: 'Cow Milk (500ml) x 3', total: 99, address: 'Dwarka Sector 22, Rose Apartments, Block-D, New Delhi', status: 'Delivered', date: '06 July 2026, 02:15 PM' },
-  { id: 'ORD-9378', name: 'Amit Verma', phone: '9812345678', items: 'Milk Sweets (Peda) x 2, Set Curd x 1', total: 400, address: 'Janakpuri Block C1, House 98, New Delhi', status: 'Cancelled', date: '06 July 2026, 11:30 AM' }
-];
+import { dbGetAllOrders, dbUpdateOrderStatus } from '@/lib/db';
 
 export default function AdminOrders() {
-  const [orders, setOrders] = useState(MOCK_ORDERS);
+  const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
   const { showToast } = useToast();
 
-  const handleStatusChange = (orderId, newStatus) => {
+  const loadOrders = async () => {
+    try {
+      const data = await dbGetAllOrders();
+      setOrders(data);
+    } catch (e) {
+      console.error('Error loading orders:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+    // Poll for new orders every 5 seconds
+    const interval = setInterval(loadOrders, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    // Optimistic UI update
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
     );
-    showToast(`Order ${orderId} updated to ${newStatus}!`, 'success');
+
+    const success = await dbUpdateOrderStatus(orderId, newStatus);
+    if (success) {
+      showToast(`Order ${orderId} updated to ${newStatus}!`, 'success');
+    } else {
+      showToast('Failed to update status in database', 'error');
+      loadOrders();
+    }
+  };
+
+  const formatItemsSummary = (items) => {
+    if (!items) return 'No items';
+    if (typeof items === 'string') return items; // Fallback for mock strings
+    if (Array.isArray(items)) {
+      return items.map(it => `${it.name} (${it.weight || ''}) x ${it.quantity}`).join(', ');
+    }
+    return 'Invalid items format';
   };
 
   const filteredOrders = orders.filter((ord) => {
-    const matchesSearch = ord.name.toLowerCase().includes(search.toLowerCase()) ||
-                          ord.id.toLowerCase().includes(search.toLowerCase()) ||
-                          ord.phone.includes(search);
+    const customerName = ord.name || '';
+    const orderId = ord.id || '';
+    const phone = ord.phone || '';
+
+    const matchesSearch = customerName.toLowerCase().includes(search.toLowerCase()) ||
+                          orderId.toLowerCase().includes(search.toLowerCase()) ||
+                          phone.includes(search);
     const matchesStatus = filterStatus === 'All' || ord.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -47,7 +76,6 @@ export default function AdminOrders() {
       <div style={{
         background: 'var(--white)',
         borderRadius: 'var(--radius-md)',
-        padding: '18px 24px',
         border: '1px solid rgba(0,0,0,0.06)',
         boxShadow: 'var(--shadow-sm)',
         display: 'flex',
@@ -78,11 +106,13 @@ export default function AdminOrders() {
                 padding: '6px 14px',
                 border: '1px solid',
                 borderColor: filterStatus === status ? 'var(--green-primary)' : 'var(--gray-light)',
-                borderRadius: 'var(--radius-sm)',
                 background: filterStatus === status ? 'var(--green-pale)' : 'white',
                 color: filterStatus === status ? 'var(--green-deep)' : 'var(--charcoal-light)',
                 fontSize: '0.78rem',
-                fontWeight: '700'
+                fontWeight: '700',
+                borderRadius: 'var(--radius-sm)',
+                whiteSpace: 'nowrap',
+                cursor: 'pointer'
               }}
               onClick={() => setFilterStatus(status)}
             >
@@ -92,7 +122,7 @@ export default function AdminOrders() {
         </div>
       </div>
 
-      {/* Orders Table Container */}
+      {/* Grid Log */}
       <div style={{
         background: 'var(--white)',
         borderRadius: 'var(--radius-lg)',
@@ -100,77 +130,86 @@ export default function AdminOrders() {
         boxShadow: 'var(--shadow-sm)',
         overflow: 'hidden'
       }}>
-        {filteredOrders.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--gray-medium)' }}>
-            <span style={{ fontSize: '32px' }}>📦</span>
-            <p style={{ marginTop: '8px', fontWeight: '600' }}>No customer orders match the filter constraints.</p>
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-              <thead>
-                <tr style={{ background: 'var(--gray-pale)', color: 'var(--charcoal-light)', borderBottom: '1px solid var(--gray-light)', fontWeight: '700' }}>
-                  <th style={{ padding: '16px' }}>Order ID</th>
-                  <th style={{ padding: '16px' }}>Date & Time</th>
-                  <th style={{ padding: '16px' }}>Customer Details</th>
-                  <th style={{ padding: '16px' }}>Items Summary</th>
-                  <th style={{ padding: '16px' }}>Bill Total</th>
-                  <th style={{ padding: '16px' }}>Delivery Address</th>
-                  <th style={{ padding: '16px' }}>Update Status</th>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+            <thead>
+              <tr style={{ background: 'var(--gray-pale)', color: 'var(--charcoal-light)', borderBottom: '1px solid var(--gray-light)', fontWeight: '700' }}>
+                <th style={{ padding: '16px' }}>Order ID</th>
+                <th style={{ padding: '16px' }}>Date</th>
+                <th style={{ padding: '16px' }}>Customer</th>
+                <th style={{ padding: '16px' }}>Items Summary</th>
+                <th style={{ padding: '16px' }}>Delivery Address</th>
+                <th style={{ padding: '16px' }}>Total Bill</th>
+                <th style={{ padding: '16px' }}>Status</th>
+                <th style={{ padding: '16px' }}>Update Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-medium)', fontWeight: '600' }}>
+                    No matching orders in the log logs.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredOrders.map((order) => {
+              ) : (
+                filteredOrders.map((ord) => {
                   let statusBg = 'var(--gray-pale)';
                   let statusColor = 'var(--charcoal-light)';
-                  if (order.status === 'Pending') { statusBg = '#FFF3CD'; statusColor = '#856404'; }
-                  else if (order.status === 'Confirmed') { statusBg = '#E2E3E5'; statusColor = '#383D41'; }
-                  else if (order.status === 'Out for Delivery') { statusBg = '#D1ECF1'; statusColor = '#0C5460'; }
-                  else if (order.status === 'Delivered') { statusBg = 'var(--green-pale)'; statusColor = 'var(--green-deep)'; }
-                  else if (order.status === 'Cancelled') { statusBg = '#F8D7DA'; statusColor = '#721C24'; }
+                  if (ord.status === 'Pending') { statusBg = '#FFF3CD'; statusColor = '#856404'; }
+                  else if (ord.status === 'Confirmed') { statusBg = '#D4EDDA'; statusColor = '#155724'; }
+                  else if (ord.status === 'Out for Delivery') { statusBg = '#D1ECF1'; statusColor = '#0C5460'; }
+                  else if (ord.status === 'Delivered') { statusBg = 'var(--green-pale)'; statusColor = 'var(--green-deep)'; }
+                  else if (ord.status === 'Cancelled') { statusBg = '#F8D7DA'; statusColor = '#721C24'; }
 
                   return (
-                    <tr key={order.id} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
-                      <td style={{ padding: '16px', fontWeight: '700', color: 'var(--green-primary)' }}>{order.id}</td>
-                      <td style={{ padding: '16px', color: 'var(--charcoal-light)', whiteSpace: 'nowrap' }}>{order.date}</td>
+                    <tr key={ord.id} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
+                      <td style={{ padding: '16px', fontWeight: '700', color: 'var(--green-primary)' }}>{ord.id}</td>
+                      <td style={{ padding: '16px', color: 'var(--charcoal-light)' }}>{ord.date || new Date(ord.timestamp).toLocaleString()}</td>
                       <td style={{ padding: '16px' }}>
-                        <div style={{ fontWeight: '700' }}>{order.name}</div>
-                        <div style={{ color: 'var(--gray-medium)', fontSize: '0.75rem' }}>📞 {order.phone}</div>
+                        <div style={{ fontWeight: '700', color: 'var(--charcoal)' }}>{ord.name}</div>
+                        <div style={{ color: 'var(--gray-medium)', fontSize: '0.75rem' }}>📞 {ord.phone}</div>
                       </td>
-                      <td style={{ padding: '16px', color: 'var(--charcoal-light)', fontWeight: '500' }}>{order.items}</td>
-                      <td style={{ padding: '16px', fontWeight: '800', fontSize: '0.95rem' }}>₹{order.total}</td>
-                      <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={order.address}>
-                        {order.address}
+                      <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={formatItemsSummary(ord.items)}>
+                        {formatItemsSummary(ord.items)}
+                      </td>
+                      <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ord.address}>
+                        {ord.address}
+                      </td>
+                      <td style={{ padding: '16px', fontWeight: '800', color: 'var(--charcoal)' }}>₹{ord.total}</td>
+                      <td style={{ padding: '16px' }}>
+                        <span style={{
+                          padding: '4px 8px', borderRadius: 'var(--radius-sm)', fontSize: '0.72rem',
+                          fontWeight: '700', background: statusBg, color: statusColor, textTransform: 'uppercase'
+                        }}>{ord.status}</span>
                       </td>
                       <td style={{ padding: '16px' }}>
                         <select
-                          value={order.status}
-                          onChange={(e) => handleStatusChange(order.id, e.target.value)}
+                          value={ord.status}
+                          onChange={(e) => handleStatusChange(ord.id, e.target.value)}
                           style={{
-                            padding: '6px 10px',
-                            border: '1px solid var(--gray-light)',
+                            padding: '4px 8px',
                             borderRadius: 'var(--radius-sm)',
-                            fontWeight: '700',
+                            border: '1px solid var(--gray-light)',
                             fontSize: '0.75rem',
-                            color: statusColor,
-                            background: statusBg,
-                            cursor: 'pointer'
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            outline: 'none'
                           }}
                         >
-                          <option value="Pending" style={{ background: 'white', color: 'black' }}>Pending</option>
-                          <option value="Confirmed" style={{ background: 'white', color: 'black' }}>Confirmed</option>
-                          <option value="Out for Delivery" style={{ background: 'white', color: 'black' }}>Out for Delivery</option>
-                          <option value="Delivered" style={{ background: 'white', color: 'black' }}>Delivered</option>
-                          <option value="Cancelled" style={{ background: 'white', color: 'black' }}>Cancelled</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Confirmed">Confirmed</option>
+                          <option value="Out for Delivery">Out for Delivery</option>
+                          <option value="Delivered">Delivered</option>
+                          <option value="Cancelled">Cancelled</option>
                         </select>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

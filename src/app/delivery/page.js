@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import Link from 'next/link';
+import { dbGetAllOrders, dbUpdateOrderStatus } from '@/lib/db';
 
 export default function DeliveryDashboard() {
   const { user, loading, isDelivery, isAdmin, logout } = useAuth();
@@ -24,12 +25,12 @@ export default function DeliveryDashboard() {
     }
   }, [user, loading]);
 
-  // Load orders from localStorage
+  // Load orders from database (Supabase with localStorage fallback)
   useEffect(() => {
-    const loadOrders = () => {
+    const loadOrders = async () => {
       try {
-        const history = JSON.parse(localStorage.getItem('uttam_orders_history') || '[]');
-        setOrders(history);
+        const data = await dbGetAllOrders();
+        setOrders(data);
       } catch (e) {
         console.error('Error loading orders:', e);
         setOrders([]);
@@ -41,24 +42,24 @@ export default function DeliveryDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleMarkDelivered = (orderId) => {
-    try {
-      const history = JSON.parse(localStorage.getItem('uttam_orders_history') || '[]');
-      const updatedHistory = history.map(o =>
-        o.id === orderId ? { ...o, status: 'Delivered' } : o
-      );
-      localStorage.setItem('uttam_orders_history', JSON.stringify(updatedHistory));
+  const handleMarkDelivered = async (orderId) => {
+    // Optimistic UI update
+    setOrders((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, status: 'Delivered' } : o))
+    );
 
-      // Also update active order if it matches
-      const activeOrder = JSON.parse(localStorage.getItem('uttam_active_order') || 'null');
-      if (activeOrder && activeOrder.id === orderId) {
-        localStorage.setItem('uttam_active_order', JSON.stringify({ ...activeOrder, status: 'Delivered' }));
-      }
-
-      setOrders(updatedHistory);
+    const success = await dbUpdateOrderStatus(orderId, 'Delivered');
+    if (success) {
       showToast(`Order ${orderId} marked as Delivered ✓`, 'success');
-    } catch (e) {
-      console.error('Error updating order:', e);
+    } else {
+      showToast('Failed to update status in database', 'error');
+      // Revert UI to match db state
+      try {
+        const data = await dbGetAllOrders();
+        setOrders(data);
+      } catch (e) {
+        console.error(e);
+      }
     }
   };
 

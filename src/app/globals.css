@@ -1733,3 +1733,139 @@ body::before {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ============================================
+   ADMIN DASHBOARD RESPONSIVENESS
+   ============================================ */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--gray-pale);
+}
+
+.admin-sidebar {
+  width: 260px;
+  background: var(--white);
+  border-right: 1px solid rgba(0,0,0,0.06);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+  max-height: 100vh;
+  width: 100%;
+}
+
+.admin-grid-two-col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--charcoal-light);
+  text-decoration: none;
+  transition: all 150ms ease;
+}
+
+.admin-nav-link:hover {
+  background: var(--gray-pale);
+  color: var(--green-primary);
+}
+
+.admin-nav-link.active {
+  color: var(--green-deep) !important;
+  background: var(--green-pale) !important;
+}
+
+/* Responsive Overrides */
+@media (max-width: 900px) {
+  .admin-layout {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 12px 20px;
+    gap: 12px;
+    border-right: none;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .admin-sidebar-header {
+    margin-bottom: 0 !important;
+  }
+
+  .admin-sidebar nav {
+    flex-direction: row !important;
+    overflow-x: auto;
+    padding-bottom: 0px;
+    gap: 6px !important;
+    flex: 1 !important;
+    justify-content: flex-end;
+    scrollbar-width: none; /* Hide scrollbar for clean tabs */
+  }
+  
+  .admin-sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .admin-sidebar a {
+    white-space: nowrap;
+    padding: 8px 12px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .admin-main {
+    padding: 24px 16px;
+    max-height: none;
+  }
+
+  .admin-grid-two-col {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .admin-profile-box {
+    display: none !important; /* Hide profile detail card on mobile nav header to save space */
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-sidebar {
+    flex-direction: column !important;
+    align-items: stretch;
+  }
+  
+  .admin-sidebar nav {
+    justify-content: flex-start;
+  }
+}
+

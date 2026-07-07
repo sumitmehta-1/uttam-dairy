@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/components/Toast';
 import { useRouter } from 'next/navigation';
+import { dbSaveOrder } from '@/lib/db';
 
 export default function CartDrawer({ isOpen, onClose }) {
   const { cart, updateQuantity, getCartTotal, clearCart } = useCart();
@@ -49,16 +50,11 @@ export default function CartDrawer({ isOpen, onClose }) {
       status: 'Pending'
     };
 
-    // Save order in localStorage for tracking
+    // Save order in localStorage for active tracking screen
     localStorage.setItem('uttam_active_order', JSON.stringify(newOrder));
 
-    // Save to orders history list as well
-    try {
-      const existingHistory = JSON.parse(localStorage.getItem('uttam_orders_history') || '[]');
-      localStorage.setItem('uttam_orders_history', JSON.stringify([newOrder, ...existingHistory]));
-    } catch (e) {
-      console.error('Error saving orders history:', e);
-    }
+    // Save order to database (Supabase with localStorage fallback)
+    dbSaveOrder(newOrder);
 
     showToast('Order placed successfully! Redirecting...', 'success');
     clearCart();

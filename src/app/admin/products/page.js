@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
-import { PRODUCTS } from '@/lib/products';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '@/components/Toast';
+import { dbGetProducts, dbSaveProduct, dbDeleteProduct } from '@/lib/db';
 
 export default function AdminProducts() {
-  const [products, setProducts] = useState(PRODUCTS);
+  const [products, setProducts] = useState([]);
   const { showToast } = useToast();
 
   // Add Product modal / form states
@@ -17,22 +17,59 @@ export default function AdminProducts() {
   const [weight, setWeight] = useState('');
   const [description, setDescription] = useState('');
 
-  const handleStockToggle = (id) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, inStock: !p.inStock } : p))
-    );
-    const prod = products.find((p) => p.id === id);
-    showToast(`${prod.name} stock toggled!`, 'info');
-  };
-
-  const handleDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this product from database?')) {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
-      showToast('Product deleted successfully', 'success');
+  // Load products list from database (Supabase/localStorage)
+  const loadInventory = async () => {
+    try {
+      const data = await dbGetProducts();
+      setProducts(data);
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handleAddSubmit = (e) => {
+  useEffect(() => {
+    loadInventory();
+  }, []);
+
+  const handleStockToggle = async (id) => {
+    const prod = products.find((p) => p.id === id);
+    if (!prod) return;
+
+    const updatedProduct = { ...prod, inStock: !prod.inStock };
+    
+    // Save state locally first
+    setProducts((prev) =>
+      prev.map((p) => (p.id === id ? updatedProduct : p))
+    );
+
+    // Save to Database
+    const success = await dbSaveProduct(updatedProduct);
+    if (success) {
+      showToast(`${prod.name} stock toggled!`, 'info');
+    } else {
+      showToast('Failed to update product in database', 'error');
+      // Revert local state
+      loadInventory();
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this product from database?')) {
+      // Save state locally first
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+
+      const success = await dbDeleteProduct(id);
+      if (success) {
+        showToast('Product deleted successfully', 'success');
+      } else {
+        showToast('Failed to delete product from database', 'error');
+        // Revert local state
+        loadInventory();
+      }
+    }
+  };
+
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!name || !price || !weight) {
       showToast('Name, Price, and Weight are required', 'error');
@@ -46,23 +83,32 @@ export default function AdminProducts() {
       price: parseInt(price) || 0,
       mrp: parseInt(mrp) || parseInt(price) || 0,
       weight,
-      image: '/assets/milk.jpg', // Default fallback image asset
+      image: '/milk.jpg', // Default fallback image asset
       deliveryTime: '10 mins',
       inStock: true,
       description
     };
 
+    // Save state locally first
     setProducts((prev) => [newProduct, ...prev]);
-    showToast(`${name} added to catalog!`, 'success');
-    setModalOpen(false);
-    
-    // Clear forms
-    setName('');
-    setCategory('Milk & Cream');
-    setPrice('');
-    setMrp('');
-    setWeight('');
-    setDescription('');
+
+    // Save to database
+    const success = await dbSaveProduct(newProduct);
+    if (success) {
+      showToast(`${name} added to catalog!`, 'success');
+      setModalOpen(false);
+      
+      // Clear forms
+      setName('');
+      setCategory('Milk & Cream');
+      setPrice('');
+      setMrp('');
+      setWeight('');
+      setDescription('');
+    } else {
+      showToast('Failed to add product to database', 'error');
+      loadInventory();
+    }
   };
 
   return (
@@ -113,50 +159,58 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody>
-              {products.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
-                  <td style={{ padding: '16px' }}>
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', background: 'var(--cream)' }}
-                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=150&q=80'; }}
-                    />
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    <div style={{ fontWeight: '700', color: 'var(--charcoal)' }}>{p.name}</div>
-                    <div style={{ color: 'var(--gray-medium)', fontSize: '0.75rem' }}>📦 Weight: {p.weight}</div>
-                  </td>
-                  <td style={{ padding: '16px', color: 'var(--charcoal-light)', fontWeight: '600' }}>{p.category}</td>
-                  <td style={{ padding: '16px', fontWeight: '800', color: 'var(--green-deep)' }}>₹{p.price}</td>
-                  <td style={{ padding: '16px', color: 'var(--gray-medium)', textDecoration: p.mrp > p.price ? 'line-through' : 'none' }}>₹{p.mrp}</td>
-                  <td style={{ padding: '16px' }}>
-                    <button
-                      onClick={() => handleStockToggle(p.id)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.72rem',
-                        fontWeight: '700',
-                        border: 'none',
-                        cursor: 'pointer',
-                        background: p.inStock ? 'var(--green-pale)' : '#F8D7DA',
-                        color: p.inStock ? 'var(--green-deep)' : '#721C24'
-                      }}
-                    >
-                      {p.inStock ? 'IN STOCK' : 'OUT OF STOCK'}
-                    </button>
-                  </td>
-                  <td style={{ padding: '16px' }}>
-                    <button
-                      onClick={() => handleDelete(p.id)}
-                      style={{ background: 'none', border: 'none', color: 'var(--danger)', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
-                    >
-                      Delete
-                    </button>
+              {products.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-medium)', fontWeight: '600' }}>
+                    Loading inventory catalog...
                   </td>
                 </tr>
-              ))}
+              ) : (
+                products.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
+                    <td style={{ padding: '16px' }}>
+                      <img
+                        src={p.image}
+                        alt={p.name}
+                        style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', background: 'var(--cream)' }}
+                        onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=150&q=80'; }}
+                      />
+                    </td>
+                    <td style={{ padding: '16px' }}>
+                      <div style={{ fontWeight: '700', color: 'var(--charcoal)' }}>{p.name}</div>
+                      <div style={{ color: 'var(--gray-medium)', fontSize: '0.75rem' }}>📦 Weight: {p.weight}</div>
+                    </td>
+                    <td style={{ padding: '16px', color: 'var(--charcoal-light)', fontWeight: '600' }}>{p.category}</td>
+                    <td style={{ padding: '16px', fontWeight: '800', color: 'var(--green-deep)' }}>₹{p.price}</td>
+                    <td style={{ padding: '16px', color: 'var(--gray-medium)', textDecoration: p.mrp > p.price ? 'line-through' : 'none' }}>₹{p.mrp}</td>
+                    <td style={{ padding: '16px' }}>
+                      <button
+                        onClick={() => handleStockToggle(p.id)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.72rem',
+                          fontWeight: '700',
+                          border: 'none',
+                          cursor: 'pointer',
+                          background: p.inStock ? 'var(--green-pale)' : '#F8D7DA',
+                          color: p.inStock ? 'var(--green-deep)' : '#721C24'
+                        }}
+                      >
+                        {p.inStock ? 'IN STOCK' : 'OUT OF STOCK'}
+                      </button>
+                    </td>
+                    <td style={{ padding: '16px' }}>
+                      <button
+                        onClick={() => handleDelete(p.id)}
+                        style={{ background: 'none', border: 'none', color: 'var(--danger)', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -180,49 +234,66 @@ export default function AdminProducts() {
                     id="prod-name"
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Uttam Fresh Paneer"
+                    placeholder="e.g. Pure Desi Cow Milk"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select
-                    className="form-input"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                  >
-                    <option value="Milk & Cream">Milk & Cream</option>
-                    <option value="Butter & Ghee">Butter & Ghee</option>
-                    <option value="Paneer & Cheese">Paneer & Cheese</option>
-                    <option value="Curd & Yogurt">Curd & Yogurt</option>
-                    <option value="Ice Cream">Ice Cream</option>
-                    <option value="Dairy Sweets">Dairy Sweets</option>
-                  </select>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label" htmlFor="prod-cat">Category</label>
+                    <select
+                      id="prod-cat"
+                      className="form-input"
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                    >
+                      <option value="Milk & Cream">Milk & Cream</option>
+                      <option value="Butter & Ghee">Butter & Ghee</option>
+                      <option value="Paneer & Cheese">Paneer & Cheese</option>
+                      <option value="Curd & Yogurt">Curd & Yogurt</option>
+                      <option value="Ice Cream">Ice Cream</option>
+                      <option value="Dairy Sweets">Dairy Sweets</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label" htmlFor="prod-wt">Weight / Vol</label>
+                    <input
+                      id="prod-wt"
+                      type="text"
+                      className="form-input"
+                      placeholder="e.g. 500 ml, 200 g"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div className="form-group" style={{ flex: 1 }}>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                     <label className="form-label" htmlFor="prod-price">Sale Price (₹)</label>
                     <input
                       id="prod-price"
                       type="number"
                       className="form-input"
-                      placeholder="e.g. 120"
+                      placeholder="e.g. 60"
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       required
                     />
                   </div>
-                  <div className="form-group" style={{ flex: 1 }}>
+
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                     <label className="form-label" htmlFor="prod-mrp">MRP (₹)</label>
                     <input
                       id="prod-mrp"
                       type="number"
                       className="form-input"
-                      placeholder="e.g. 130"
+                      placeholder="e.g. 65"
                       value={mrp}
                       onChange={(e) => setMrp(e.target.value)}
                     />
@@ -230,32 +301,19 @@ export default function AdminProducts() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label" htmlFor="prod-weight">Weight / Package Size</label>
-                  <input
-                    id="prod-weight"
-                    type="text"
-                    className="form-input"
-                    placeholder="e.g. 200g, 500ml, 1L"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
                   <label className="form-label" htmlFor="prod-desc">Product Description</label>
                   <textarea
                     id="prod-desc"
                     className="form-input"
-                    style={{ height: '80px', padding: '10px', resize: 'vertical' }}
-                    placeholder="Brief description of quality and fresh milk properties..."
+                    rows="3"
+                    placeholder="Describe the freshness or purity of the dairy product..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                   ></textarea>
                 </div>
 
                 <button type="submit" className="form-submit" style={{ marginTop: '16px' }}>
-                  Save to Database
+                  Save & Publish Product
                 </button>
               </form>
             </div>

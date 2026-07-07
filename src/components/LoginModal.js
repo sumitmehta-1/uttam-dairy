@@ -87,7 +87,7 @@ export default function LoginModal({ isOpen, onClose, initialMode = 'login' }) {
           showToast(`Welcome back, ${result.user.name}!`, 'success');
           onClose();
         } else {
-          showToast('Invalid credentials', 'error');
+          showToast(result.error || 'Invalid credentials', 'error');
         }
       } else {
         const result = await signup(name, phone, password, address, latitude, longitude);
@@ -95,7 +95,7 @@ export default function LoginModal({ isOpen, onClose, initialMode = 'login' }) {
           showToast('Account created successfully!', 'success');
           onClose();
         } else {
-          showToast('Failed to create account', 'error');
+          showToast(result.error || 'Failed to create account', 'error');
         }
       }
     } catch (err) {

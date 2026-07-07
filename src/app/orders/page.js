@@ -9,10 +9,11 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
 import Link from 'next/link';
+import { dbGetAllOrders } from '@/lib/db';
 
 const MOCK_PAST_ORDERS = [
-  { id: 'ORD-9380', date: '06 July 2026, 03:00 PM', items: [{ name: 'Pure White Table Butter', qty: 1, weight: '200 g', price: 110 }, { name: 'Fresh Soft Paneer (Family Pack)', qty: 1, weight: '500 g', price: 260 }], total: 370, status: 'Delivered', address: 'Dwarka Sector 4, DDA Flats, Pocket-Q, New Delhi' },
-  { id: 'ORD-9379', date: '06 July 2026, 02:15 PM', items: [{ name: 'Uttam Premium Cow Milk', qty: 3, weight: '500 ml', price: 33 }], total: 99, status: 'Delivered', address: 'Dwarka Sector 22, Rose Apartments, Block-D, New Delhi' }
+  { id: 'ORD-9380', date: '06 July 2026, 03:00 PM', items: [{ name: 'Pure White Table Butter', qty: 1, weight: '200 g', price: 110 }, { name: 'Fresh Soft Paneer (Family Pack)', qty: 1, weight: '500 g', price: 260 }], total: 370, status: 'Delivered', address: 'Dwarka Sector 4, DDA Flats, Pocket-Q, New Delhi', phone: '9876543210' },
+  { id: 'ORD-9379', date: '06 July 2026, 02:15 PM', items: [{ name: 'Uttam Premium Cow Milk', qty: 3, weight: '500 ml', price: 33 }], total: 99, status: 'Delivered', address: 'Dwarka Sector 22, Rose Apartments, Block-D, New Delhi', phone: '9876543210' }
 ];
 
 export default function OrderHistory() {
@@ -33,14 +34,27 @@ export default function OrderHistory() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    if (user && user.loggedIn) {
-      // Only seed mock orders for predefined showcase accounts
-      if (user.phone === '9999999999' || user.name === 'Test Customer' || user.phone === '9876543210') {
-        setPastOrders(MOCK_PAST_ORDERS);
-      } else {
-        setPastOrders([]);
+    const fetchOrders = async () => {
+      if (user && user.loggedIn) {
+        try {
+          const allOrders = await dbGetAllOrders();
+          
+          // Seed initial mock orders in localStorage order history list if it's empty so it looks nice
+          if (allOrders.length === 0) {
+            localStorage.setItem('uttam_orders_history', JSON.stringify(MOCK_PAST_ORDERS));
+            const userOrders = MOCK_PAST_ORDERS.filter(o => o.phone === user.phone);
+            setPastOrders(userOrders);
+          } else {
+            const userOrders = allOrders.filter(o => o.phone === user.phone);
+            setPastOrders(userOrders);
+          }
+        } catch (e) {
+          console.error(e);
+        }
       }
-    }
+    };
+    
+    fetchOrders();
   }, [user]);
 
   if (loading || !user || !user.loggedIn) {
