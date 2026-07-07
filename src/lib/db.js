@@ -304,3 +304,52 @@ export const dbUpdateOrderItems = async (orderId, items, subtotal, deliveryFee, 
   localStorage.setItem('uttam_orders_history', JSON.stringify(updatedHistory));
   return true;
 };
+
+// ============================================
+// SELF-HEALING SEEDING FOR DATABASE
+// ============================================
+
+export const dbEnsureSupabaseSeeded = async () => {
+  if (!isSupabaseConfigured()) return;
+  
+  try {
+    // 1. Seed profiles table if empty
+    const { data: profiles, error: profError } = await supabase
+      .from('profiles')
+      .select('phone');
+      
+    if (!profError && (!profiles || profiles.length === 0)) {
+      console.log('Seeding profiles table in Supabase...');
+      const seedProfiles = [
+        { phone: '9050644622', password: 'dairy823@*', name: 'Ankush', address: 'Uttam Dairy Shop, Main Market Road', role: 'admin' },
+        { phone: '9050644621', password: 'dairy823@*', name: 'Delivery Partner', address: 'Uttam Dairy Delivery Hub', role: 'delivery' },
+        { phone: '9876543210', password: 'password123', name: 'Aarav Sharma', address: 'Dwarka Sector 12, Flat 104, Block-B, New Delhi', role: 'user' }
+      ];
+      await supabase.from('profiles').insert(seedProfiles);
+    }
+
+    // 2. Seed products table if empty
+    const { data: products, error: prodError } = await supabase
+      .from('products')
+      .select('id');
+      
+    if (!prodError && (!products || products.length === 0)) {
+      console.log('Seeding products table in Supabase...');
+      const dbProducts = PRODUCTS.map(p => ({
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: Number(p.price),
+        mrp: Number(p.mrp),
+        weight: p.weight,
+        image: p.image,
+        delivery_time: p.deliveryTime || '10 mins',
+        in_stock: p.inStock,
+        description: p.description
+      }));
+      await supabase.from('products').insert(dbProducts);
+    }
+  } catch (e) {
+    console.error('Self-healing database seeding failed:', e);
+  }
+};

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { dbGetProfile, dbCreateProfile } from '@/lib/db';
+import { dbGetProfile, dbCreateProfile, dbEnsureSupabaseSeeded } from '@/lib/db';
 
 const AuthContext = createContext();
 
@@ -13,6 +13,9 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const verifySession = async () => {
       try {
+        // Run database auto-seeding if empty
+        await dbEnsureSupabaseSeeded();
+
         const savedUser = localStorage.getItem('uttam_dairy_user');
         if (savedUser) {
           const parsedUser = JSON.parse(savedUser);
