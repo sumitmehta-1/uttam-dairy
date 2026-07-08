@@ -12,8 +12,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Disable Row Level Security (RLS) for public access in development
-ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Seed default admin and delivery accounts
 INSERT INTO public.profiles (phone, password, name, address, role)
@@ -40,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
-ALTER TABLE public.products DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
 -- Seed default catalog
 INSERT INTO public.products (id, name, category, price, mrp, weight, image, delivery_time, in_stock, description)
@@ -70,12 +69,21 @@ CREATE TABLE IF NOT EXISTS public.orders (
   address text NOT NULL,
   phone text NOT NULL,
   name text NOT NULL,
-  status text DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Out for Delivery', 'Delivered', 'Cancelled'))
+  status text DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Out for Delivery', 'Delivered', 'Cancelled')),
+  CONSTRAINT orders_total_limit_check CHECK (total <= 1000)
 );
 
-ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
--- 4. Grant full public read/write permissions to anon role
-GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon;
+-- 4. Live-safe public permissions
+REVOKE ALL ON public.profiles FROM anon;
+REVOKE ALL ON public.orders FROM anon;
+REVOKE ALL ON public.products FROM anon;
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT SELECT ON public.products TO anon;
+
+DROP POLICY IF EXISTS "Public can read products" ON public.products;
+CREATE POLICY "Public can read products" ON public.products
+  FOR SELECT
+  TO anon
+  USING (true);

@@ -8,6 +8,25 @@ const isSupabaseConfigured = () => {
   return url && key && url !== '' && key !== 'your-public-anon-key-here' && key !== 'sb_publishable_zCKw3Jniil8-DhOGuJI7ag_TrOQkKHv_placeholder';
 };
 
+const MAX_ORDER_TOTAL = 1000;
+const isBrowser = () => typeof window !== 'undefined';
+
+const apiFetch = async (url, options = {}) => {
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(result.error || 'Request failed.');
+  }
+  return result;
+};
+
 const toAppProfile = (profile) => {
   if (!profile) return null;
   return {
@@ -72,6 +91,15 @@ const ensureSeedProfiles = () => {
 // ============================================
 
 export const dbCheckConnection = async () => {
+  if (isBrowser()) {
+    try {
+      await apiFetch('/api/profiles');
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message || 'Admin database check failed.' };
+    }
+  }
+
   if (!isSupabaseConfigured()) {
     return { success: false, error: 'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY) are not set in Vercel settings.' };
   }
@@ -159,6 +187,11 @@ export const dbCreateProfile = async (profileData) => {
 };
 
 export const dbGetAllProfiles = async () => {
+  if (isBrowser()) {
+    const result = await apiFetch('/api/profiles');
+    return (result.profiles || []).map(toAppProfile);
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
@@ -185,6 +218,17 @@ export const dbGetAllProfiles = async () => {
 // ============================================
 
 export const dbGetProducts = async () => {
+  if (isBrowser()) {
+    try {
+      const result = await apiFetch('/api/products');
+      if (result.products && result.products.length > 0) {
+        return result.products.map(toAppProduct);
+      }
+    } catch (e) {
+      console.warn('Product API failed, falling back to local catalog.', e);
+    }
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
@@ -214,6 +258,14 @@ export const dbGetProducts = async () => {
 };
 
 export const dbSaveProduct = async (product) => {
+  if (isBrowser()) {
+    await apiFetch('/api/products', {
+      method: 'POST',
+      body: JSON.stringify(product)
+    });
+    return true;
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase
@@ -254,6 +306,14 @@ export const dbSaveProduct = async (product) => {
 };
 
 export const dbDeleteProduct = async (productId) => {
+  if (isBrowser()) {
+    await apiFetch('/api/products', {
+      method: 'DELETE',
+      body: JSON.stringify({ productId })
+    });
+    return true;
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase
@@ -284,6 +344,11 @@ export const dbDeleteProduct = async (productId) => {
 // ============================================
 
 export const dbGetAllOrders = async () => {
+  if (isBrowser()) {
+    const result = await apiFetch('/api/orders');
+    return (result.orders || []).map(toAppOrder);
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { data, error } = await supabase
@@ -305,6 +370,18 @@ export const dbGetAllOrders = async () => {
 };
 
 export const dbSaveOrder = async (order) => {
+  if (Number(order.total) > MAX_ORDER_TOTAL) {
+    throw new Error(`Order total cannot exceed Rs ${MAX_ORDER_TOTAL}.`);
+  }
+
+  if (isBrowser()) {
+    await apiFetch('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify(order)
+    });
+    return true;
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase
@@ -341,6 +418,14 @@ export const dbSaveOrder = async (order) => {
 };
 
 export const dbUpdateOrderStatus = async (orderId, status) => {
+  if (isBrowser()) {
+    await apiFetch('/api/orders', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderId, status })
+    });
+    return true;
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase
@@ -372,6 +457,14 @@ export const dbUpdateOrderStatus = async (orderId, status) => {
 };
 
 export const dbUpdateOrderItems = async (orderId, items, subtotal, deliveryFee, handlingFee, total) => {
+  if (isBrowser()) {
+    await apiFetch('/api/orders', {
+      method: 'PATCH',
+      body: JSON.stringify({ orderId, items, subtotal, deliveryFee, handlingFee, total })
+    });
+    return true;
+  }
+
   if (isSupabaseConfigured()) {
     try {
       const { error } = await supabase

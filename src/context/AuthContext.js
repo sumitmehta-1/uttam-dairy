@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { dbGetProfile, dbCreateProfile, dbEnsureSupabaseSeeded } from '@/lib/db';
 
 const AuthContext = createContext();
 
@@ -13,23 +12,14 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const verifySession = async () => {
       try {
-        // Run database auto-seeding if empty
-        await dbEnsureSupabaseSeeded();
-
-        const savedUser = localStorage.getItem('uttam_dairy_user');
-        if (savedUser) {
-          const parsedUser = JSON.parse(savedUser);
-          
-          // Re-verify user role directly against database to prevent localStorage tampering
-          const dbUser = await dbGetProfile(parsedUser.phone);
-          if (dbUser && dbUser.role === parsedUser.role) {
-            setUser({ ...dbUser, loggedIn: true });
-            localStorage.setItem('uttam_dairy_user', JSON.stringify({ ...dbUser, loggedIn: true }));
-          } else {
-            // Local role mismatch or tampered, clear session
-            setUser(null);
-            localStorage.removeItem('uttam_dairy_user');
-          }
+        const response = await fetch('/api/auth/session', { credentials: 'include' });
+        const result = await response.json();
+        if (response.ok && result.user) {
+          setUser(result.user);
+          localStorage.setItem('uttam_dairy_user', JSON.stringify(result.user));
+        } else {
+          setUser(null);
+          localStorage.removeItem('uttam_dairy_user');
         }
       } catch (e) {
         console.error('Error verifying session:', e);
@@ -43,75 +33,43 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (phone, password) => {
-    // 1. Query user profile from database (Supabase with localStorage fallback)
-    const dbUser = await dbGetProfile(phone);
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phone, password })
+    });
+    const result = await response.json();
 
-    if (!dbUser) {
-      return { success: false, error: 'User does not exist. Please sign up.' };
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Login failed.' };
     }
 
-    // 2. Securely match password
-    if (dbUser.password !== password) {
-      return { success: false, error: 'Incorrect password.' };
-    }
-
-    // 3. Create logged in session
-    const sessionUser = {
-      name: dbUser.name,
-      phone: dbUser.phone,
-      address: dbUser.address,
-      role: dbUser.role,
-      loggedIn: true
-    };
-
-    setUser(sessionUser);
-    localStorage.setItem('uttam_dairy_user', JSON.stringify(sessionUser));
-    return { success: true, user: sessionUser };
+    setUser(result.user);
+    localStorage.setItem('uttam_dairy_user', JSON.stringify(result.user));
+    return { success: true, user: result.user };
   };
 
   const signup = async (name, phone, password, address, latitude, longitude) => {
-    // Check if user already exists
-    const existing = await dbGetProfile(phone);
-    if (existing) {
-      return { success: false, error: 'Mobile number already registered.' };
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ name, phone, password, address, latitude, longitude })
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: result.error || 'Could not create account.' };
     }
 
-    // Create user profile in the shared database when Supabase is configured.
-    let newProfile;
-    try {
-      newProfile = await dbCreateProfile({
-        name,
-        phone,
-        password,
-        address: address || 'No address set',
-        latitude,
-        longitude
-      });
-    } catch (e) {
-      return {
-        success: false,
-        error: e.message || 'Could not save account to the shared database.'
-      };
-    }
-
-    if (!newProfile) {
-      return { success: false, error: 'Could not create account. Please try again.' };
-    }
-
-    const sessionUser = {
-      name: newProfile.name,
-      phone: newProfile.phone,
-      address: newProfile.address,
-      role: newProfile.role,
-      loggedIn: true
-    };
-
-    setUser(sessionUser);
-    localStorage.setItem('uttam_dairy_user', JSON.stringify(sessionUser));
-    return { success: true, user: sessionUser };
+    setUser(result.user);
+    localStorage.setItem('uttam_dairy_user', JSON.stringify(result.user));
+    return { success: true, user: result.user };
   };
 
   const logout = () => {
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(console.error);
     setUser(null);
     localStorage.removeItem('uttam_dairy_user');
   };

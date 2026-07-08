@@ -7,6 +7,8 @@ import { useToast } from '@/components/Toast';
 import { useRouter } from 'next/navigation';
 import { dbSaveOrder } from '@/lib/db';
 
+const MAX_ORDER_TOTAL = 1000;
+
 export default function CartDrawer({ isOpen, onClose }) {
   const { cart, updateQuantity, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
@@ -21,6 +23,7 @@ export default function CartDrawer({ isOpen, onClose }) {
   const deliveryFee = subtotal >= 299 || subtotal === 0 ? 0 : 25;
   const handlingFee = subtotal > 0 ? 4 : 0;
   const total = subtotal + deliveryFee + handlingFee;
+  const isOverOrderLimit = total > MAX_ORDER_TOTAL;
 
   const handleCheckout = async () => {
     if (!user || !user.loggedIn) {
@@ -30,6 +33,11 @@ export default function CartDrawer({ isOpen, onClose }) {
 
     if (cart.length === 0) {
       showToast('Your cart is empty', 'error');
+      return;
+    }
+
+    if (isOverOrderLimit) {
+      showToast(`Order limit is Rs ${MAX_ORDER_TOTAL}. Please reduce your cart total.`, 'error');
       return;
     }
 
@@ -236,7 +244,18 @@ export default function CartDrawer({ isOpen, onClose }) {
               <span>₹{total}</span>
             </div>
 
-            <button className="cart-checkout-btn ripple-effect" onClick={handleCheckout}>
+            {isOverOrderLimit && (
+              <div style={{ background: '#F8D7DA', color: '#721C24', border: '1px solid #F5C6CB', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: '0.78rem', fontWeight: '700', marginBottom: '12px' }}>
+                Maximum order value is Rs {MAX_ORDER_TOTAL}. Remove items before placing order.
+              </div>
+            )}
+
+            <button
+              className="cart-checkout-btn ripple-effect"
+              onClick={handleCheckout}
+              disabled={isOverOrderLimit}
+              style={isOverOrderLimit ? { opacity: 0.55, cursor: 'not-allowed' } : undefined}
+            >
               <span>✨</span> Place Order & Track
             </button>
           </div>
