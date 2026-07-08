@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useToast } from '@/components/Toast';
 import { dbGetAllOrders, dbUpdateOrderStatus } from '@/lib/db';
 
@@ -163,7 +164,11 @@ export default function AdminOrders() {
 
                   return (
                     <tr key={ord.id} style={{ borderBottom: '1px solid var(--gray-pale)', transition: 'background 150ms' }}>
-                      <td style={{ padding: '16px', fontWeight: '700', color: 'var(--green-primary)' }}>{ord.id}</td>
+                      <td style={{ padding: '16px', fontWeight: '700' }}>
+                        <Link href={`/admin/orders/${encodeURIComponent(ord.id)}`} style={{ color: 'var(--green-primary)', textDecoration: 'none' }}>
+                          {ord.id}
+                        </Link>
+                      </td>
                       <td style={{ padding: '16px', color: 'var(--charcoal-light)' }}>{ord.date || new Date(ord.timestamp).toLocaleString()}</td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ fontWeight: '700', color: 'var(--charcoal)' }}>{ord.name}</div>

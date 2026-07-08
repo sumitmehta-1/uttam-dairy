@@ -14,7 +14,7 @@ import { useToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { dbGetProducts } from '@/lib/db';
+import { dbGetAllOrders, dbGetProducts } from '@/lib/db';
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -66,14 +66,30 @@ export default function Home() {
 
   // Sync active order status
   useEffect(() => {
-    const checkActiveOrder = () => {
+    const checkActiveOrder = async () => {
       const saved = localStorage.getItem('uttam_active_order');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.status !== 'Delivered' && parsed.status !== 'Cancelled') {
-          setActiveOrder(parsed);
-        } else {
-          setActiveOrder(null);
+        try {
+          const allOrders = await dbGetAllOrders();
+          const sharedOrder = (allOrders || []).find((order) => order.id === parsed.id);
+          const latestOrder = sharedOrder || parsed;
+
+          if (latestOrder.status === 'Delivered' || latestOrder.status === 'Cancelled') {
+            localStorage.removeItem('uttam_active_order');
+            setActiveOrder(null);
+          } else {
+            localStorage.setItem('uttam_active_order', JSON.stringify(latestOrder));
+            setActiveOrder(latestOrder);
+          }
+        } catch (e) {
+          console.error('Error checking active order status:', e);
+          if (parsed.status !== 'Delivered' && parsed.status !== 'Cancelled') {
+            setActiveOrder(parsed);
+          } else {
+            localStorage.removeItem('uttam_active_order');
+            setActiveOrder(null);
+          }
         }
       } else {
         setActiveOrder(null);

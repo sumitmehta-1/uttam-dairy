@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { dbGetAllProfiles, dbGetAllOrders } from '@/lib/db';
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -111,7 +112,11 @@ export default function AdminUsers() {
                       {c.orders && c.orders.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {c.orders.slice(0, 3).map((order) => (
-                            <div key={order.id} style={{ border: '1px solid var(--gray-pale)', borderRadius: 'var(--radius-sm)', padding: '8px', background: 'var(--cream)' }}>
+                            <Link
+                              key={order.id}
+                              href={`/admin/orders/${encodeURIComponent(order.id)}`}
+                              style={{ border: '1px solid var(--gray-pale)', borderRadius: 'var(--radius-sm)', padding: '8px', background: 'var(--cream)', display: 'block', textDecoration: 'none' }}
+                            >
                               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
                                 <span style={{ fontWeight: '800', color: 'var(--green-primary)' }}>{order.id}</span>
                                 <span style={{ fontWeight: '800', color: 'var(--charcoal)' }}>Rs {order.total}</span>
@@ -120,9 +125,9 @@ export default function AdminUsers() {
                                 {formatOrderItems(order.items)}
                               </div>
                               <div style={{ color: 'var(--gray-medium)', fontSize: '0.72rem', fontWeight: '700', marginTop: '4px' }}>
-                                {order.status || 'Pending'}
+                                {order.status || 'Pending'} - View bill
                               </div>
-                            </div>
+                            </Link>
                           ))}
                           {c.orders.length > 3 && (
                             <div style={{ color: 'var(--gray-medium)', fontSize: '0.72rem', fontWeight: '700' }}>

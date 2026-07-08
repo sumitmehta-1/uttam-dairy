@@ -15,6 +15,7 @@ export default function AdminProducts() {
   const [price, setPrice] = useState('');
   const [mrp, setMrp] = useState('');
   const [weight, setWeight] = useState('');
+  const [image, setImage] = useState('');
   const [description, setDescription] = useState('');
 
   // Load products list from database (Supabase/localStorage)
@@ -69,6 +70,26 @@ export default function AdminProducts() {
     }
   };
 
+  const handleImageFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please choose a valid image file', 'error');
+      return;
+    }
+
+    if (file.size > 1500000) {
+      showToast('Image is too large. Please use an image under 1.5 MB.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setImage(reader.result);
+    reader.onerror = () => showToast('Could not read selected image', 'error');
+    reader.readAsDataURL(file);
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!name || !price || !weight) {
@@ -83,7 +104,7 @@ export default function AdminProducts() {
       price: parseInt(price) || 0,
       mrp: parseInt(mrp) || parseInt(price) || 0,
       weight,
-      image: '/milk.jpg', // Default fallback image asset
+      image: image.trim() || '/milk.jpg',
       deliveryTime: '20 mins',
       inStock: true,
       description
@@ -104,6 +125,7 @@ export default function AdminProducts() {
       setPrice('');
       setMrp('');
       setWeight('');
+      setImage('');
       setDescription('');
     } else {
       showToast('Failed to add product to database', 'error');
@@ -297,6 +319,39 @@ export default function AdminProducts() {
                       value={mrp}
                       onChange={(e) => setMrp(e.target.value)}
                     />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="prod-image">Product Image</label>
+                  <input
+                    id="prod-image"
+                    type="text"
+                    className="form-input"
+                    placeholder="Paste image URL or path, e.g. /milk.jpg"
+                    value={image}
+                    onChange={(e) => setImage(e.target.value)}
+                  />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '10px', flexWrap: 'wrap' }}>
+                    <input
+                      id="prod-image-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      style={{ fontSize: '0.8rem', color: 'var(--charcoal-light)' }}
+                    />
+                    <div style={{ width: '72px', height: '72px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--gray-light)', background: 'var(--cream)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      {image ? (
+                        <img
+                          src={image}
+                          alt="Product preview"
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <span style={{ color: 'var(--gray-medium)', fontSize: '0.7rem', fontWeight: '700' }}>Preview</span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

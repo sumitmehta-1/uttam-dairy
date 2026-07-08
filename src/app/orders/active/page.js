@@ -8,9 +8,8 @@ import LoginModal from '@/components/LoginModal';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/Toast';
-import { PRODUCTS } from '@/lib/products';
 import Link from 'next/link';
-import { dbUpdateOrderStatus, dbUpdateOrderItems } from '@/lib/db';
+import { dbUpdateOrderStatus } from '@/lib/db';
 
 export default function ActiveOrderPage() {
   const { user, loading } = useAuth();
@@ -98,52 +97,6 @@ export default function ActiveOrderPage() {
       updateOrderStatus('Cancelled');
       showToast('Order cancelled successfully. Refund initiated (if paid via UPI).', 'info');
     }
-  };
-
-  const handleAddItemToOrder = (product) => {
-    if (isLocked || isCancelled) return;
-
-    setOrder((prev) => {
-      if (!prev) return null;
-
-      // Check if item exists in order
-      const existingItem = prev.items.find(item => item.id === product.id);
-      let updatedItems;
-      if (existingItem) {
-        updatedItems = prev.items.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        updatedItems = [...prev.items, { ...product, quantity: 1 }];
-      }
-
-      // Re-calculate pricing totals
-      const newSubtotal = updatedItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-      const newDeliveryFee = newSubtotal >= 299 ? 0 : 25;
-      const newHandlingFee = 4;
-      const newTotal = newSubtotal + newDeliveryFee + newHandlingFee;
-
-      const updatedOrder = {
-        ...prev,
-        items: updatedItems,
-        subtotal: newSubtotal,
-        deliveryFee: newDeliveryFee,
-        handlingFee: newHandlingFee,
-        total: newTotal,
-        timestamp: Date.now() // Reset timer timestamp to current time
-      };
-
-      localStorage.setItem('uttam_active_order', JSON.stringify(updatedOrder));
-
-      // Update order details in Supabase/localStorage database
-      dbUpdateOrderItems(prev.id, updatedItems, newSubtotal, newDeliveryFee, newHandlingFee, newTotal);
-
-      // Reset local countdown timer to 3 minutes
-      setTimeLeft(180);
-      showToast(`${product.name} added! Timer reset to 3 minutes.`, 'success');
-
-      return updatedOrder;
-    });
   };
 
   // Helper formatting for countdown display MM:SS
@@ -364,7 +317,7 @@ export default function ActiveOrderPage() {
         </div>
 
         {/* QUICK ADD ITEMS CAROUSEL (3 Minute modify window) */}
-        {!isLocked && !isCancelled && (
+        {false && !isLocked && !isCancelled && (
           <div style={{
             background: 'var(--white)',
             borderRadius: 'var(--radius-lg)',
