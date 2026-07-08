@@ -106,7 +106,7 @@ export const dbCheckConnection = async () => {
   try {
     const { data, error } = await supabase.from('profiles').select('phone').limit(1);
     if (error) {
-      return { success: false, error: `Supabase query error (Code ${error.code}): ${error.message}. Hint: ${error.details || 'Run the SQL setup script to grant table permissions.'}` };
+      return { success: false, error: 'Private tables are protected by RLS. Use an admin server session to check database sync.' };
     }
     return { success: true };
   } catch (e) {
