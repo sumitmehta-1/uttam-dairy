@@ -84,7 +84,7 @@ export default function AdminProducts() {
       mrp: parseInt(mrp) || parseInt(price) || 0,
       weight,
       image: '/milk.jpg', // Default fallback image asset
-      deliveryTime: '10 mins',
+      deliveryTime: '20 mins',
       inStock: true,
       description
     };

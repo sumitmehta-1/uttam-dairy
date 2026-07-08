@@ -5,6 +5,13 @@ import { dbGetAllProfiles, dbGetAllOrders } from '@/lib/db';
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
 
+  const formatOrderItems = (items) => {
+    if (!Array.isArray(items) || items.length === 0) return 'No items';
+    return items
+      .map((item) => `${item.name} x ${item.quantity || item.qty || 1}`)
+      .join(', ');
+  };
+
   // Load registered users from Supabase / localStorage database
   useEffect(() => {
     const loadUsers = async () => {
@@ -18,10 +25,17 @@ export default function AdminUsers() {
           counts[order.phone] = (counts[order.phone] || 0) + 1;
           return counts;
         }, {});
+        const ordersByPhone = (orders || []).reduce((grouped, order) => {
+          if (!order.phone) return grouped;
+          grouped[order.phone] = grouped[order.phone] || [];
+          grouped[order.phone].push(order);
+          return grouped;
+        }, {});
 
         setUsers((profiles || []).map((profile) => ({
           ...profile,
-          ordersCount: orderCounts[profile.phone] || profile.ordersCount || 0
+          ordersCount: orderCounts[profile.phone] || profile.ordersCount || 0,
+          orders: ordersByPhone[profile.phone] || []
         })));
       } catch (e) {
         console.error('Error loading registered users:', e);
@@ -59,6 +73,7 @@ export default function AdminUsers() {
                 <th style={{ padding: '16px' }}>Saved Delivery Address</th>
                 <th style={{ padding: '16px' }}>Role</th>
                 <th style={{ padding: '16px' }}>Monthly Orders</th>
+                <th style={{ padding: '16px' }}>Orders</th>
                 <th style={{ padding: '16px' }}>Active Subscription</th>
                 <th style={{ padding: '16px' }}>Joined Date</th>
               </tr>
@@ -66,7 +81,7 @@ export default function AdminUsers() {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-medium)', fontWeight: '600' }}>
+                  <td colSpan="9" style={{ padding: '24px', textAlign: 'center', color: 'var(--gray-medium)', fontWeight: '600' }}>
                     No users registered yet.
                   </td>
                 </tr>
@@ -92,6 +107,33 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td style={{ padding: '16px', fontWeight: '800', textAlign: 'center' }}>{c.ordersCount || 0}</td>
+                    <td style={{ padding: '16px', minWidth: '280px', maxWidth: '360px' }}>
+                      {c.orders && c.orders.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {c.orders.slice(0, 3).map((order) => (
+                            <div key={order.id} style={{ border: '1px solid var(--gray-pale)', borderRadius: 'var(--radius-sm)', padding: '8px', background: 'var(--cream)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                                <span style={{ fontWeight: '800', color: 'var(--green-primary)' }}>{order.id}</span>
+                                <span style={{ fontWeight: '800', color: 'var(--charcoal)' }}>Rs {order.total}</span>
+                              </div>
+                              <div style={{ color: 'var(--charcoal-light)', fontSize: '0.75rem', lineHeight: '1.35' }}>
+                                {formatOrderItems(order.items)}
+                              </div>
+                              <div style={{ color: 'var(--gray-medium)', fontSize: '0.72rem', fontWeight: '700', marginTop: '4px' }}>
+                                {order.status || 'Pending'}
+                              </div>
+                            </div>
+                          ))}
+                          {c.orders.length > 3 && (
+                            <div style={{ color: 'var(--gray-medium)', fontSize: '0.72rem', fontWeight: '700' }}>
+                              +{c.orders.length - 3} more order(s)
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--gray-medium)', fontWeight: '600' }}>No orders yet</span>
+                      )}
+                    </td>
                     <td style={{ padding: '16px', fontWeight: '600', color: c.subscription && c.subscription !== 'None' ? 'var(--green-primary)' : 'var(--gray-medium)' }}>
                       {c.subscription || 'None'}
                     </td>
