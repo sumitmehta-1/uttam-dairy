@@ -9,6 +9,7 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [selectedItemsOrder, setSelectedItemsOrder] = useState(null);
   const { showToast } = useToast();
 
   const loadOrders = async () => {
@@ -46,7 +47,7 @@ export default function AdminOrders() {
     if (!items) return 'No items';
     if (typeof items === 'string') return items; // Fallback for mock strings
     if (Array.isArray(items)) {
-      return items.map(it => `${it.name} (${it.weight || ''}) x ${it.quantity}`).join(', ');
+      return items.map(it => `${it.name} (${it.weight || ''}) x ${it.quantity || it.qty || 1}`).join(', ');
     }
     return 'Invalid items format';
   };
@@ -174,8 +175,25 @@ export default function AdminOrders() {
                         <div style={{ fontWeight: '700', color: 'var(--charcoal)' }}>{ord.name}</div>
                         <div style={{ color: 'var(--gray-medium)', fontSize: '0.75rem' }}>📞 {ord.phone}</div>
                       </td>
-                      <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={formatItemsSummary(ord.items)}>
-                        {formatItemsSummary(ord.items)}
+                      <td style={{ padding: '16px', maxWidth: '240px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedItemsOrder(ord)}
+                          title={formatItemsSummary(ord.items)}
+                          style={{
+                            color: 'var(--green-primary)',
+                            maxWidth: '220px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            textDecoration: 'underline',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            textAlign: 'left'
+                          }}
+                        >
+                          {formatItemsSummary(ord.items)}
+                        </button>
                       </td>
                       <td style={{ padding: '16px', color: 'var(--charcoal-light)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={ord.address}>
                         {ord.address}
@@ -216,6 +234,54 @@ export default function AdminOrders() {
           </table>
         </div>
       </div>
+
+      {selectedItemsOrder && (
+        <div className="modal-overlay open" onClick={() => setSelectedItemsOrder(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
+            <button className="modal-close" onClick={() => setSelectedItemsOrder(null)}>&times;</button>
+            <div className="modal-header">
+              <div className="modal-header-icon">Items</div>
+              <h2>Order Items</h2>
+              <p>{selectedItemsOrder.id} - {selectedItemsOrder.name} - {selectedItemsOrder.phone}</p>
+            </div>
+            <div className="modal-body">
+              <div style={{ border: '1px solid var(--gray-pale)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                {Array.isArray(selectedItemsOrder.items) && selectedItemsOrder.items.length > 0 ? (
+                  selectedItemsOrder.items.map((item, index) => {
+                    const qty = Number(item.quantity || item.qty || 1);
+                    const price = Number(item.price || 0);
+                    return (
+                      <div key={`${item.id || item.name}-${index}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '16px', padding: '14px 16px', borderBottom: index === selectedItemsOrder.items.length - 1 ? 'none' : '1px solid var(--gray-pale)' }}>
+                        <div>
+                          <div style={{ fontWeight: '800', color: 'var(--charcoal)' }}>{item.name}</div>
+                          <div style={{ color: 'var(--gray-medium)', fontSize: '0.8rem', marginTop: '4px' }}>
+                            {item.weight || 'Item'} x {qty} at Rs {price}
+                          </div>
+                        </div>
+                        <div style={{ fontWeight: '800', color: 'var(--charcoal)' }}>Rs {price * qty}</div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div style={{ padding: '18px', color: 'var(--gray-medium)', fontWeight: '700' }}>No items found.</div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '18px', paddingTop: '14px', borderTop: '1px dashed var(--gray-light)', fontWeight: '800', color: 'var(--green-deep)', fontSize: '1.05rem' }}>
+                <span>Total Bill</span>
+                <span>Rs {selectedItemsOrder.total}</span>
+              </div>
+
+              <Link
+                href={`/admin/orders/${encodeURIComponent(selectedItemsOrder.id)}`}
+                style={{ display: 'inline-flex', marginTop: '18px', color: 'var(--green-primary)', fontWeight: '800', textDecoration: 'none' }}
+              >
+                Open full bill
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
