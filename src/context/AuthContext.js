@@ -76,15 +76,27 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Mobile number already registered.' };
     }
 
-    // Create user profile in database
-    const newProfile = await dbCreateProfile({
-      name,
-      phone,
-      password,
-      address: address || 'No address set',
-      latitude,
-      longitude
-    });
+    // Create user profile in the shared database when Supabase is configured.
+    let newProfile;
+    try {
+      newProfile = await dbCreateProfile({
+        name,
+        phone,
+        password,
+        address: address || 'No address set',
+        latitude,
+        longitude
+      });
+    } catch (e) {
+      return {
+        success: false,
+        error: e.message || 'Could not save account to the shared database.'
+      };
+    }
+
+    if (!newProfile) {
+      return { success: false, error: 'Could not create account. Please try again.' };
+    }
 
     const sessionUser = {
       name: newProfile.name,

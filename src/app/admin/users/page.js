@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { dbGetAllProfiles } from '@/lib/db';
+import { dbGetAllProfiles, dbGetAllOrders } from '@/lib/db';
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
 
@@ -9,8 +9,20 @@ export default function AdminUsers() {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const data = await dbGetAllProfiles();
-        setUsers(data || []);
+        const [profiles, orders] = await Promise.all([
+          dbGetAllProfiles(),
+          dbGetAllOrders()
+        ]);
+        const orderCounts = (orders || []).reduce((counts, order) => {
+          if (!order.phone) return counts;
+          counts[order.phone] = (counts[order.phone] || 0) + 1;
+          return counts;
+        }, {});
+
+        setUsers((profiles || []).map((profile) => ({
+          ...profile,
+          ordersCount: orderCounts[profile.phone] || profile.ordersCount || 0
+        })));
       } catch (e) {
         console.error('Error loading registered users:', e);
       }

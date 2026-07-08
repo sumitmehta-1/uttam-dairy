@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   address text NOT NULL,
   phone text NOT NULL,
   name text NOT NULL,
-  status text DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Delivered', 'Cancelled'))
+  status text DEFAULT 'Pending' CHECK (status IN ('Pending', 'Confirmed', 'Out for Delivery', 'Delivered', 'Cancelled'))
 );
 
 ALTER TABLE public.orders DISABLE ROW LEVEL SECURITY;

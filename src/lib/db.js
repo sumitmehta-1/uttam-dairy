@@ -8,6 +8,41 @@ const isSupabaseConfigured = () => {
   return url && key && url !== '' && key !== 'your-public-anon-key-here' && key !== 'sb_publishable_zCKw3Jniil8-DhOGuJI7ag_TrOQkKHv_placeholder';
 };
 
+const toAppProfile = (profile) => {
+  if (!profile) return null;
+  return {
+    ...profile,
+    ordersCount: profile.orders_count ?? profile.ordersCount ?? 0,
+    subscription: profile.subscription ?? 'None',
+    dateJoined: profile.date_joined || profile.dateJoined || (
+      profile.created_at
+        ? new Date(profile.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+        : 'N/A'
+    )
+  };
+};
+
+const toAppOrder = (order) => {
+  if (!order) return null;
+  return {
+    ...order,
+    deliveryFee: Number(order.delivery_fee ?? order.deliveryFee ?? 0),
+    handlingFee: Number(order.handling_fee ?? order.handlingFee ?? 0),
+    paymentMethod: order.payment_method || order.paymentMethod,
+    subtotal: Number(order.subtotal ?? 0),
+    total: Number(order.total ?? 0)
+  };
+};
+
+const toAppProduct = (product) => {
+  if (!product) return null;
+  return {
+    ...product,
+    deliveryTime: product.delivery_time || product.deliveryTime || '10 mins',
+    inStock: product.in_stock ?? product.inStock ?? true
+  };
+};
+
 // Default seed profiles (admin + delivery + demo users)
 const SEED_PROFILES = [
   { id: 'USR-001', name: 'Ankush', phone: '9050644622', password: 'dairy823@*', address: 'Uttam Dairy Shop, Main Market Road', role: 'admin', ordersCount: 0, subscription: 'None', dateJoined: '01 July 2026' },
@@ -67,7 +102,7 @@ export const dbGetProfile = async (phone) => {
       if (error) {
         console.error('Supabase dbGetProfile error:', error.message, error.details);
       } else if (data) {
-        return data;
+        return toAppProfile(data);
       }
     } catch (e) {
       console.error('Supabase profile check failed, falling back to local database.', e);
@@ -91,12 +126,14 @@ export const dbCreateProfile = async (profileData) => {
         .single();
 
       if (error) {
-        console.error('Supabase dbCreateProfile error:', error.message, error.details);
-      } else if (data) {
-        return data;
+        throw new Error(`Could not save user to shared database: ${error.message}`);
+      }
+      if (data) {
+        return toAppProfile(data);
       }
     } catch (e) {
       console.error('Supabase profile insertion failed:', e);
+      throw e;
     }
   }
 
@@ -132,7 +169,7 @@ export const dbGetAllProfiles = async () => {
       if (error) {
         console.error('Supabase dbGetAllProfiles error:', error.message, error.details);
       } else if (data) {
-        return data;
+        return data.map(toAppProfile);
       }
     } catch (e) {
       console.warn('Supabase get all profiles failed:', e);
@@ -158,7 +195,7 @@ export const dbGetProducts = async () => {
       if (error) {
         console.error('Supabase dbGetProducts error:', error.message, error.details);
       } else if (data && data.length > 0) {
-        return data;
+        return data.map(toAppProduct);
       }
     } catch (e) {
       console.warn('Supabase products check failed, falling back to local database.', e);
@@ -288,12 +325,12 @@ export const dbSaveOrder = async (order) => {
         }]);
 
       if (error) {
-        console.error('Supabase dbSaveOrder error:', error.message, error.details);
-      } else {
-        return true;
+        throw new Error(`Could not save order to shared database: ${error.message}`);
       }
+      return true;
     } catch (e) {
       console.error('Supabase order creation failed:', e);
+      throw e;
     }
   }
 
@@ -312,12 +349,12 @@ export const dbUpdateOrderStatus = async (orderId, status) => {
         .eq('id', orderId);
       
       if (error) {
-        console.error('Supabase dbUpdateOrderStatus error:', error.message, error.details);
-      } else {
-        return true;
+        throw new Error(`Could not update order status in shared database: ${error.message}`);
       }
+      return true;
     } catch (e) {
       console.error('Supabase order status update failed:', e);
+      throw e;
     }
   }
 
@@ -342,9 +379,13 @@ export const dbUpdateOrderItems = async (orderId, items, subtotal, deliveryFee, 
         .update({ items, subtotal, delivery_fee: deliveryFee, handling_fee: handlingFee, total })
         .eq('id', orderId);
       
-      if (!error) return true;
+      if (error) {
+        throw new Error(`Could not update order items in shared database: ${error.message}`);
+      }
+      return true;
     } catch (e) {
       console.error('Supabase order items modification failed:', e);
+      throw e;
     }
   }
 

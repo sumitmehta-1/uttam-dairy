@@ -22,9 +22,9 @@ export default function CartDrawer({ isOpen, onClose }) {
   const handlingFee = subtotal > 0 ? 4 : 0;
   const total = subtotal + deliveryFee + handlingFee;
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (!user || !user.loggedIn) {
-      showToast('Please login to place an order', 'error');
+      showToast('Please log in first', 'error');
       return;
     }
 
@@ -50,16 +50,22 @@ export default function CartDrawer({ isOpen, onClose }) {
       status: 'Pending'
     };
 
-    // Save order in localStorage for active tracking screen
-    localStorage.setItem('uttam_active_order', JSON.stringify(newOrder));
+    try {
+      // Save order to the shared database first. If Supabase is configured but
+      // blocked, we must not pretend the order succeeded only on this phone.
+      await dbSaveOrder(newOrder);
 
-    // Save order to database (Supabase with localStorage fallback)
-    dbSaveOrder(newOrder);
+      // Save order in localStorage for active tracking screen
+      localStorage.setItem('uttam_active_order', JSON.stringify(newOrder));
 
-    showToast('Order placed successfully! Redirecting...', 'success');
-    clearCart();
-    onClose();
-    router.push('/orders/active');
+      showToast('Order placed successfully! Redirecting...', 'success');
+      clearCart();
+      onClose();
+      router.push('/orders/active');
+    } catch (e) {
+      console.error(e);
+      showToast(e.message || 'Order could not be saved. Please contact the shop.', 'error');
+    }
   };
 
   return (
