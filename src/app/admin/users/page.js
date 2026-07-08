@@ -2,29 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { dbGetAllProfiles } from '@/lib/db';
-
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
 
-  // Load registered users from localStorage
+  // Load registered users from Supabase / localStorage database
   useEffect(() => {
-const loadUsers = async () => {
-try {
-const data = await dbGetAllProfiles();
-setUsers(data || []);
-} catch (e) {
-console.error('Error loading registered users:', e);
-}
-};
-
-loadUsers();
-const interval = setInterval(loadUsers, 3000);
-return () => clearInterval(interval);
-}, []);
-
+    const loadUsers = async () => {
+      try {
+        const data = await dbGetAllProfiles();
+        setUsers(data || []);
+      } catch (e) {
+        console.error('Error loading registered users:', e);
+      }
+    };
 
     loadUsers();
-    // Poll every 3 seconds to keep sync
     const interval = setInterval(loadUsers, 3000);
     return () => clearInterval(interval);
   }, []);

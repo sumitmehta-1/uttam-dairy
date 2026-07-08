@@ -33,6 +33,25 @@ const ensureSeedProfiles = () => {
 };
 
 // ============================================
+// DIAGNOSTIC CONNECTION CHECK
+// ============================================
+
+export const dbCheckConnection = async () => {
+  if (!isSupabaseConfigured()) {
+    return { success: false, error: 'Supabase environment variables (NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY) are not set in Vercel settings.' };
+  }
+  try {
+    const { data, error } = await supabase.from('profiles').select('phone').limit(1);
+    if (error) {
+      return { success: false, error: `Supabase query error (Code ${error.code}): ${error.message}. Hint: ${error.details || 'Run the SQL setup script to grant table permissions.'}` };
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: `Connection failed: ${e.message}` };
+  }
+};
+
+// ============================================
 // USERS / PROFILES METHODS
 // ============================================
 
@@ -45,9 +64,13 @@ export const dbGetProfile = async (phone) => {
         .eq('phone', phone)
         .single();
       
-      if (!error && data) return data;
+      if (error) {
+        console.error('Supabase dbGetProfile error:', error.message, error.details);
+      } else if (data) {
+        return data;
+      }
     } catch (e) {
-      console.warn('Supabase profile check failed, falling back to local database.', e);
+      console.error('Supabase profile check failed, falling back to local database.', e);
     }
   }
 
@@ -67,7 +90,11 @@ export const dbCreateProfile = async (profileData) => {
         .select()
         .single();
 
-      if (!error && data) return data;
+      if (error) {
+        console.error('Supabase dbCreateProfile error:', error.message, error.details);
+      } else if (data) {
+        return data;
+      }
     } catch (e) {
       console.error('Supabase profile insertion failed:', e);
     }
@@ -102,7 +129,11 @@ export const dbGetAllProfiles = async () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (!error && data) return data;
+      if (error) {
+        console.error('Supabase dbGetAllProfiles error:', error.message, error.details);
+      } else if (data) {
+        return data;
+      }
     } catch (e) {
       console.warn('Supabase get all profiles failed:', e);
     }
@@ -124,7 +155,11 @@ export const dbGetProducts = async () => {
         .select('*')
         .order('created_at', { ascending: true });
       
-      if (!error && data && data.length > 0) return data;
+      if (error) {
+        console.error('Supabase dbGetProducts error:', error.message, error.details);
+      } else if (data && data.length > 0) {
+        return data;
+      }
     } catch (e) {
       console.warn('Supabase products check failed, falling back to local database.', e);
     }
@@ -159,7 +194,11 @@ export const dbSaveProduct = async (product) => {
           description: product.description
         }]);
       
-      if (!error) return true;
+      if (error) {
+        console.error('Supabase dbSaveProduct error:', error.message, error.details);
+      } else {
+        return true;
+      }
     } catch (e) {
       console.error('Supabase product save failed:', e);
     }
@@ -185,7 +224,11 @@ export const dbDeleteProduct = async (productId) => {
         .delete()
         .eq('id', productId);
       
-      if (!error) return true;
+      if (error) {
+        console.error('Supabase dbDeleteProduct error:', error.message, error.details);
+      } else {
+        return true;
+      }
     } catch (e) {
       console.error('Supabase product deletion failed:', e);
     }
@@ -211,7 +254,11 @@ export const dbGetAllOrders = async () => {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (!error && data) return data;
+      if (error) {
+        console.error('Supabase dbGetAllOrders error:', error.message, error.details);
+      } else if (data) {
+        return data;
+      }
     } catch (e) {
       console.warn('Supabase get orders check failed, falling back to local database.', e);
     }
@@ -240,7 +287,11 @@ export const dbSaveOrder = async (order) => {
           status: order.status
         }]);
 
-      if (!error) return true;
+      if (error) {
+        console.error('Supabase dbSaveOrder error:', error.message, error.details);
+      } else {
+        return true;
+      }
     } catch (e) {
       console.error('Supabase order creation failed:', e);
     }
@@ -260,7 +311,11 @@ export const dbUpdateOrderStatus = async (orderId, status) => {
         .update({ status })
         .eq('id', orderId);
       
-      if (!error) return true;
+      if (error) {
+        console.error('Supabase dbUpdateOrderStatus error:', error.message, error.details);
+      } else {
+        return true;
+      }
     } catch (e) {
       console.error('Supabase order status update failed:', e);
     }

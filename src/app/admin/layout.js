@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { dbCheckConnection } from '@/lib/db';
 
 export default function AdminLayout({ children }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const [dbStatus, setDbStatus] = useState({ success: null, error: null });
 
   useEffect(() => {
     if (!loading) {
@@ -19,6 +21,17 @@ export default function AdminLayout({ children }) {
       }
     }
   }, [user, loading, router]);
+
+  // Check database connection status on mount
+  useEffect(() => {
+    const checkDb = async () => {
+      const status = await dbCheckConnection();
+      setDbStatus(status);
+    };
+    checkDb();
+    const interval = setInterval(checkDb, 10000); // Check every 10 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading || !user || !isAdmin()) {
     return (
@@ -83,6 +96,41 @@ export default function AdminLayout({ children }) {
             <span>👥</span> Users Database
           </Link>
         </nav>
+
+        {/* Database Connection Status Widget */}
+        <div style={{
+          padding: '8px 12px',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '0.72rem',
+          fontWeight: '700',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          background: dbStatus.success === true ? 'var(--green-pale)' : dbStatus.success === false ? '#F8D7DA' : 'var(--gray-pale)',
+          border: '1px solid',
+          borderColor: dbStatus.success === true ? 'rgba(44,107,70,0.15)' : dbStatus.success === false ? 'rgba(220,53,69,0.15)' : 'rgba(0,0,0,0.04)',
+          color: dbStatus.success === true ? 'var(--green-deep)' : dbStatus.success === false ? '#721C24' : 'var(--charcoal-light)',
+          maxWidth: '100%',
+          overflow: 'hidden'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: dbStatus.success === true ? 'var(--success)' : dbStatus.success === false ? 'var(--danger)' : 'var(--gold-primary)',
+              display: 'inline-block'
+            }}></span>
+            <span>
+              {dbStatus.success === true ? 'Supabase Sync Active' : dbStatus.success === false ? 'Database Offline' : 'Verifying Sync...'}
+            </span>
+          </div>
+          {dbStatus.success === false && (
+            <div style={{ fontSize: '0.62rem', fontWeight: '500', color: '#842029', lineHeight: '1.2', marginTop: '2px', wordBreak: 'break-word' }}>
+              ⚠️ {dbStatus.error}
+            </div>
+          )}
+        </div>
 
         <div className="admin-profile-box" style={{
           padding: '12px 16px', background: 'var(--cream)', borderRadius: 'var(--radius-md)',
