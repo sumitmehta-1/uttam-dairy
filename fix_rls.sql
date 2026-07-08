@@ -1,45 +1,50 @@
 -- ================================================================
--- UTTAM DAIRY - LIVE SECURITY RLS SETUP
--- Run this in Supabase SQL Editor before going live.
--- App writes/reads private data through Next.js API routes using
--- SUPABASE_SERVICE_ROLE_KEY. Do NOT expose that key in NEXT_PUBLIC vars.
+-- UTTAM DAIRY - PERMISSIVE DATABASE ACCESS FIX
+-- Run this in Supabase SQL Editor if signup/login/orders show
+-- "permission denied for table profiles/orders/products".
 -- ================================================================
 
--- Enable RLS on all app tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
--- Remove old permissive policies
 DROP POLICY IF EXISTS "Allow all access to profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Allow all access to products" ON public.products;
 DROP POLICY IF EXISTS "Allow all access to orders" ON public.orders;
+DROP POLICY IF EXISTS "Public can read products" ON public.products;
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.profiles;
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.products;
 DROP POLICY IF EXISTS "Enable read access for all users" ON public.orders;
 DROP POLICY IF EXISTS "Enable insert for all users" ON public.profiles;
 DROP POLICY IF EXISTS "Enable insert for all users" ON public.products;
 DROP POLICY IF EXISTS "Enable insert for all users" ON public.orders;
-DROP POLICY IF EXISTS "Public can read products" ON public.products;
 
--- Remove broad anonymous permissions
-REVOKE ALL ON public.profiles FROM anon;
-REVOKE ALL ON public.orders FROM anon;
-REVOKE ALL ON public.products FROM anon;
-REVOKE ALL ON public.profiles FROM authenticated;
-REVOKE ALL ON public.orders FROM authenticated;
-REVOKE ALL ON public.products FROM authenticated;
+CREATE POLICY "Allow all access to profiles" ON public.profiles
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
 
--- Public visitors may only read catalog products
+CREATE POLICY "Allow all access to products" ON public.products
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Allow all access to orders" ON public.orders
+  FOR ALL
+  USING (true)
+  WITH CHECK (true);
+
 GRANT USAGE ON SCHEMA public TO anon;
-GRANT SELECT ON public.products TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT ALL ON public.profiles TO anon;
+GRANT ALL ON public.products TO anon;
+GRANT ALL ON public.orders TO anon;
+GRANT ALL ON public.profiles TO authenticated;
+GRANT ALL ON public.products TO authenticated;
+GRANT ALL ON public.orders TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
 
-CREATE POLICY "Public can read products" ON public.products
-  FOR SELECT
-  TO anon
-  USING (true);
-
--- Keep order status and value constrained at database level
 ALTER TABLE public.orders DROP CONSTRAINT IF EXISTS orders_status_check;
 ALTER TABLE public.orders ADD CONSTRAINT orders_status_check
   CHECK (status IN ('Pending', 'Confirmed', 'Out for Delivery', 'Delivered', 'Cancelled'));
