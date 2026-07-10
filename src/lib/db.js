@@ -9,7 +9,7 @@ const isSupabaseConfigured = () => {
 };
 
 const MAX_ORDER_TOTAL = 1000;
-const isBrowser = () => typeof window !== 'undefined';
+const isBrowser = () => false;
 
 const apiFetch = async (url, options = {}) => {
   const response = await fetch(url, {
@@ -106,7 +106,7 @@ export const dbCheckConnection = async () => {
   try {
     const { data, error } = await supabase.from('profiles').select('phone').limit(1);
     if (error) {
-      return { success: false, error: 'Private tables are protected by RLS. Use an admin server session to check database sync.' };
+      return { success: false, error: `Supabase query error (Code ${error.code}): ${error.message}. Run fix_rls.sql in Supabase SQL Editor.` };
     }
     return { success: true };
   } catch (e) {

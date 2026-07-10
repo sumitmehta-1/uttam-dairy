@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { dbGetProfile, dbCreateProfile } from '@/lib/db';
 
 const AuthContext = createContext();
 
@@ -8,68 +9,79 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount and verify session
   useEffect(() => {
-    const verifySession = async () => {
-      try {
-        const response = await fetch('/api/auth/session', { credentials: 'include' });
-        const result = await response.json();
-        if (response.ok && result.user) {
-          setUser(result.user);
-          localStorage.setItem('uttam_dairy_user', JSON.stringify(result.user));
-        } else {
-          setUser(null);
-          localStorage.removeItem('uttam_dairy_user');
-        }
-      } catch (e) {
-        console.error('Error verifying session:', e);
-        setUser(null);
-        localStorage.removeItem('uttam_dairy_user');
-      }
-      setLoading(false);
-    };
-
-    verifySession();
+    try {
+      const savedUser = localStorage.getItem('uttam_dairy_user');
+      setUser(savedUser ? JSON.parse(savedUser) : null);
+    } catch (e) {
+      console.error('Error loading saved user:', e);
+      setUser(null);
+      localStorage.removeItem('uttam_dairy_user');
+    }
+    setLoading(false);
   }, []);
 
   const login = async (phone, password) => {
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ phone, password })
-    });
-    const result = await response.json();
+    const dbUser = await dbGetProfile(phone);
 
-    if (!response.ok) {
-      return { success: false, error: result.error || 'Login failed.' };
+    if (!dbUser) {
+      return { success: false, error: 'User does not exist. Please sign up.' };
     }
 
-    setUser(result.user);
-    localStorage.setItem('uttam_dairy_user', JSON.stringify(result.user));
-    return { success: true, user: result.user };
+    if (dbUser.password !== password) {
+      return { success: false, error: 'Incorrect password.' };
+    }
+
+    const sessionUser = {
+      name: dbUser.name,
+      phone: dbUser.phone,
+      address: dbUser.address,
+      role: dbUser.role,
+      latitude: dbUser.latitude,
+      longitude: dbUser.longitude,
+      loggedIn: true
+    };
+
+    setUser(sessionUser);
+    localStorage.setItem('uttam_dairy_user', JSON.stringify(sessionUser));
+    return { success: true, user: sessionUser };
   };
 
   const signup = async (name, phone, password, address, latitude, longitude) => {
-    const response = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ name, phone, password, address, latitude, longitude })
-    });
-    const result = await response.json();
-
-    if (!response.ok) {
-      return { success: false, error: result.error || 'Could not create account.' };
+    const existing = await dbGetProfile(phone);
+    if (existing) {
+      return { success: false, error: 'Mobile number already registered.' };
     }
 
-    setUser(result.user);
-    localStorage.setItem('uttam_dairy_user', JSON.stringify(result.user));
-    return { success: true, user: result.user };
+    const newProfile = await dbCreateProfile({
+      name,
+      phone,
+      password,
+      address: address || 'No address set',
+      latitude,
+      longitude
+    });
+
+    if (!newProfile) {
+      return { success: false, error: 'Could not create account. Please try again.' };
+    }
+
+    const sessionUser = {
+      name: newProfile.name,
+      phone: newProfile.phone,
+      address: newProfile.address,
+      role: newProfile.role,
+      latitude: newProfile.latitude,
+      longitude: newProfile.longitude,
+      loggedIn: true
+    };
+
+    setUser(sessionUser);
+    localStorage.setItem('uttam_dairy_user', JSON.stringify(sessionUser));
+    return { success: true, user: sessionUser };
   };
 
   const logout = () => {
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(console.error);
     setUser(null);
     localStorage.removeItem('uttam_dairy_user');
   };

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { dbCheckConnection } from '@/lib/db';
 
 export default function AdminLayout({ children }) {
   const { user, loading, isAdmin } = useAuth();
@@ -24,13 +25,8 @@ export default function AdminLayout({ children }) {
   // Check database connection status on mount
   useEffect(() => {
     const checkDb = async () => {
-      try {
-        const response = await fetch('/api/profiles', { credentials: 'include' });
-        const result = await response.json().catch(() => ({}));
-        setDbStatus(response.ok ? { success: true, error: null } : { success: false, error: result.error || 'Admin database check failed.' });
-      } catch (e) {
-        setDbStatus({ success: false, error: e.message || 'Admin database check failed.' });
-      }
+      const status = await dbCheckConnection();
+      setDbStatus(status);
     };
     checkDb();
     const interval = setInterval(checkDb, 10000); // Check every 10 seconds
